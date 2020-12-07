@@ -51,8 +51,9 @@ public class DatabaseTransactionTests {
             tx.commit();
         } );
     }
+
     @Test
-    void mergeNodeTest() throws Exception
+    void createNodesTest() throws Exception
     {
         // Do work here
         FederosTransactionEventListenerAdapter listener = new FederosTransactionEventListenerAdapter();
@@ -62,8 +63,84 @@ public class DatabaseTransactionTests {
 
         cluster.coreTx( ( db, tx ) ->
         {
-            Node node = tx.createNode( label( "boo" ) );
-            node.setProperty( "foobar", "baz_bat" );
+            tx.execute("CREATE (t:Test {uuid:'123XYZ'})");
+            tx.execute("CREATE (t2:Test {uuid:'XZY123'})");
+            tx.commit();
+        } );
+    }
+    @Test
+    void mergeNewNodeTest() throws Exception
+    {
+        // Do work here
+        FederosTransactionEventListenerAdapter listener = new FederosTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx( ( db, tx ) ->
+        {
+            tx.execute("MERGE (t:Test {uuid:'123XYZ'})");
+            tx.commit();
+        } );
+    }
+    @Test
+    void mergeExistingNodeTest() throws Exception
+    {
+        // Do work here
+        FederosTransactionEventListenerAdapter listener = new FederosTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx( ( db, tx ) ->
+        {
+            tx.execute("CREATE (t:Test {uuid:'123XYZ'})");
+            tx.commit();
+        } );
+
+        cluster.coreTx( ( db, tx ) ->
+        {
+            tx.execute("MERGE (t:Test {uuid:'123XYZ'})");
+            tx.commit();
+        } );
+    }
+
+    @Test
+    void createNodesAndRelationshipTest() throws Exception
+    {
+        // Do work here
+        FederosTransactionEventListenerAdapter listener = new FederosTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx( ( db, tx ) ->
+        {
+            tx.execute("CREATE (t:Test {uuid:'123XYZ'})-[:CONNECTED_TO]->(t2:Test {uuid:'XYZ123'})");
+            tx.commit();
+        } );
+
+
+    }
+
+    @Test
+    void deleteExistingNodeTest() throws Exception
+    {
+        // Do work here
+        FederosTransactionEventListenerAdapter listener = new FederosTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx( ( db, tx ) ->
+        {
+            tx.execute("CREATE (t:Test {uuid:'123XYZ'})");
+            tx.commit();
+        } );
+
+        cluster.coreTx( ( db, tx ) ->
+        {
+            tx.execute("MATCH (t:Test {uuid:'123XYZ'}) DELETE t");
             tx.commit();
         } );
     }
