@@ -36,7 +36,23 @@ public class DatabaseTransactionTests {
     }
 
     @Test
-    void shouldDoSomeUsefulThings() throws Exception
+    void createNodeTest() throws Exception
+    {
+        // Do work here
+        FederosTransactionEventListenerAdapter listener = new FederosTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx( ( db, tx ) ->
+        {
+            Node node = tx.createNode( label( "boo" ) );
+            node.setProperty( "foobar", "baz_bat" );
+            tx.commit();
+        } );
+    }
+    @Test
+    void mergeNodeTest() throws Exception
     {
         // Do work here
         FederosTransactionEventListenerAdapter listener = new FederosTransactionEventListenerAdapter();

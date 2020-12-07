@@ -5,36 +5,83 @@ import java.util.*;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.lang3.time.StopWatch;
-// import org.codehaus.jackson.map.ObjectMapper; // need to add the jackson library to the maven dependencies
+import org.codehaus.jackson.map.ObjectMapper; // need to add the jackson library to the maven dependencies
 import org.neo4j.graphdb.*;
 import org.apache.commons.collections.IteratorUtils;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
-// import org.neo4j.logging.FormattedLogProvider;
-import org.neo4j.logging.Log;
+import org.neo4j.logging.*;
+
 
 
 public class TransactionRecorder {
-
-    public static final Label EVENT_NODE_LABEL = Label
-            .label("Event");
-    public static final Label REP_NODE_LABEL = Label
-            .label("ReplicationDB");
-    private static final String DONT_REPLICATE = "dont_replicate";
-    public static final Label NO_AUDIT_NODE_LABEL = Label
-            .label(DONT_REPLICATE);
-    private static final String UUID = "uuid";
-    private static Log log;
-    private static boolean enabled = true;
-    private static boolean replicationEnabled = true;
-    private static boolean eventEnabled = true;
     private final TransactionData transactionData;
+    private final String state;
+    private final GraphDatabaseService databaseService;
 
-    public TransactionRecorder(TransactionData txData) throws Exception {
+    public TransactionRecorder(TransactionData txData, String state, GraphDatabaseService databaseService) throws Exception {
         this.transactionData = txData;
+        this.state = state;
+        this.databaseService = databaseService;
+    }
 
+    public static final Label                      EVENT_NODE_LABEL                = Label
+            .label("Event");
+    public static final Label                      AUDIT_NODE_LABEL                = Label
+            .label("Audit");
+    private static final String                    DONT_AUDIT                      = "cxp_dont_audit";
+    public static final Label                      NO_AUDIT_NODE_LABEL             = Label
+            .label(DONT_AUDIT);
+    private static final String                    SMS_NODE_LABEL                  = "Sms";
+    private static final String                    UUID                            = "uuid";
+    private static final String                    HOUSEHOLD_LABEL                 = "Household";
+    private static final String                    METADATA_LABEL                  = "Metadata";
 
+    // properties for lucene search logic
+    private static final Integer                   LAST_FOUR_CARD                  = 4;
+    private static final String                    LAST_FOUR_CARD_NUMBER_SEPARATOR = " ";
+    private static final String                    PERSON_NODE_CARD_NUMBER         = "_last_four_card_numbers";
+    private static final String                    CARD_NODE_CARD_NUMBER           = "number";
+
+    private static final Map<String, List<String>> NODE_PRIMARY_KEY_MAP;
+    private static final RelationshipType          HOUSEHOLD_ADDRESS               = RelationshipType
+            .withName("HouseholdAddress");
+    private static final RelationshipType          ADDRESS_PHONE                   = RelationshipType
+            .withName("AddressPhone");
+    private static final RelationshipType          HOUSEHOLD_PERSON                = RelationshipType
+            .withName("HouseholdPerson");
+    private static final RelationshipType          PERSON_CARD                     = RelationshipType
+            .withName("PersonCard");
+    private static final RelationshipType          DIGITALACCOUNT_SMS              = RelationshipType
+            .withName("DigitalAccountSms");
+
+    private static Log                             log;
+    private static boolean                         enabled                         = true;
+    private static boolean                         auditEnabled                    = true;
+    private static boolean                         eventEnabled                    = true;
+
+    static
+    {
+        // Map that stores the primary key of each entity
+        NODE_PRIMARY_KEY_MAP = new HashMap<>();
+        NODE_PRIMARY_KEY_MAP.put("Household", Collections.singletonList("uuid"));
+        NODE_PRIMARY_KEY_MAP.put("Address", Collections.singletonList("uuid"));
+        NODE_PRIMARY_KEY_MAP.put("Card", Collections.singletonList("number"));
+        NODE_PRIMARY_KEY_MAP.put("AlternateId", Collections.singletonList("alternate_id"));
+        NODE_PRIMARY_KEY_MAP.put("Person", Collections.singletonList("uuid"));
+        NODE_PRIMARY_KEY_MAP.put("Phone", Collections.singletonList("number"));
+        NODE_PRIMARY_KEY_MAP.put("Sms", Collections.singletonList("number"));
+        NODE_PRIMARY_KEY_MAP.put("Attribute", Collections.singletonList("key"));
+        NODE_PRIMARY_KEY_MAP.put("DigitalBannerProfile", Collections.singletonList("key"));
+        NODE_PRIMARY_KEY_MAP.put("Preference", Arrays.asList("key", "preference_code"));
+        NODE_PRIMARY_KEY_MAP.put("DigitalAccount", Arrays.asList("digital_guid", "email_address"));
+
+    }
+    // is supposed we can just make this class static as well as this method
+    // and just pass what is needed for serialization
+    // i.e. public static void serializeTransacition(TransactinData tx, String state, GraphDatabaseServide db)
+    public void serializeTransaction() throws Exception {
         /*ObjectMapper objectMapper = new ObjectMapper();
         try {
             if (!enabled) {
@@ -442,4 +489,5 @@ public class TransactionRecorder {
         }
         return null;*/
     }
+
 }
