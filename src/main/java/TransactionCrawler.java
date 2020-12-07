@@ -12,27 +12,35 @@ public class TransactionCrawler {
 
 
 
-    public static void nodeCrawler (List<Node> nodes) {
+    public static void nodeCrawler (List<Node> nodes)  {
 
         for (Node node : nodes) {
 
             System.out.println(format("A new node with ID %s should be created", node.getId()));
             labelCrawler(node);
             relationshipCrawler(node);
-            propertyCrawler(node);
+            nodePropertyCrawler(node);
         }
 
     }
 
     public static void deletedNodeCrawler (List<Node> nodes) {
+        try {
 
-        for (Node node : nodes) {
+            for (Node node : nodes) {
 
-            System.out.println(format("A node with ID %s should be deleted", node.getId()));
+                System.out.println(format("A node with ID %s should be deleted", node.getId()));
 
+
+
+            }
+        } catch (Exception e) {
+
+            System.out.println("Exception message: " + e.getMessage());
         }
-
     }
+
+
     private static void labelCrawler (Node node) {
 
         List<Label> labels = IteratorUtils.toList(node.getLabels().iterator());
@@ -52,10 +60,12 @@ public class TransactionCrawler {
             System.out.println(format("this node has the relationship with type %s",rel.getType()));
             System.out.println(format("The relationship starts with node ID %s",rel.getStartNodeId()));
             System.out.println(format("The relationship ends with node ID %s",rel.getEndNodeId()));
+            relationshipPropertyCrawler(rel);
 
         }
     }
-    private static void propertyCrawler (Node node) {
+
+    private static void nodePropertyCrawler (Node node) {
 
         Map<String, Object> props = node.getAllProperties();
 
@@ -65,4 +75,17 @@ public class TransactionCrawler {
 
         }
     }
+    private static void relationshipPropertyCrawler (Relationship rel) {
+
+        Map<String, Object> props = rel.getAllProperties();
+
+        for (Map.Entry<String, Object> entry : props.entrySet()) {
+            System.out.println("relationship has property with name " + entry.getKey()
+                    + ", and a value of " + entry.getValue());
+
+        }
+    }
+
+
+
 }

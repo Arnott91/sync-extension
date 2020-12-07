@@ -26,8 +26,11 @@ public class FederosTransactionEventListenerAdapter extends TransactionEventList
         newNodeList = IteratorUtils.toList(data.createdNodes().iterator());
         deletedNodeList = IteratorUtils.toList(data.deletedNodes().iterator());
 
+
+
         if (!deletedNodeList.isEmpty()) TransactionCrawler.deletedNodeCrawler(deletedNodeList);
         if (!newNodeList.isEmpty()) TransactionCrawler.nodeCrawler(newNodeList);
+
 
 
         return null;

@@ -144,4 +144,48 @@ public class DatabaseTransactionTests {
             tx.commit();
         } );
     }
+
+    @Test
+    void deleteDetachExistingNodeTest() throws Exception
+    {
+        // Do work here
+        FederosTransactionEventListenerAdapter listener = new FederosTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx( ( db, tx ) ->
+        {
+            tx.execute("CREATE (t:Test {uuid:'123XYZ'})-[:CONNECTED_TO]->(t2:Test {uuid:'XYZ123'})");
+            tx.commit();
+        } );
+
+        cluster.coreTx( ( db, tx ) ->
+        {
+            tx.execute("MATCH (t:Test {uuid:'123XYZ'}) DETACH DELETE t");
+            tx.commit();
+        } );
+    }
+
+    @Test
+    void deleteRelationshipTest() throws Exception
+    {
+        // Do work here
+        FederosTransactionEventListenerAdapter listener = new FederosTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx( ( db, tx ) ->
+        {
+            tx.execute("CREATE (t:Test {uuid:'123XYZ'})-[:CONNECTED_TO]->(t2:Test {uuid:'XYZ123'})");
+            tx.commit();
+        } );
+
+        cluster.coreTx( ( db, tx ) ->
+        {
+            tx.execute("MATCH (t:Test {uuid:'123XYZ'})-[r:CONNECTED_TO]->(t2:Test {uuid:'XYZ123'}) DELETE r");
+            tx.commit();
+        } );
+    }
 }
