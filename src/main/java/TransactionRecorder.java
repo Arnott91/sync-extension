@@ -3,23 +3,15 @@ import java.util.*;
 
 import org.codehaus.jackson.map.ObjectMapper; // need to add the jackson library to the maven dependencies
 import org.neo4j.graphdb.*;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.event.LabelEntry;
 import org.neo4j.graphdb.event.PropertyEntry;
 import org.neo4j.graphdb.event.TransactionData;
 
-
-
-
 public class TransactionRecorder {
     private final TransactionData transactionData;
-    private final String state;
-    private final GraphDatabaseService databaseService;
 
-    public TransactionRecorder(TransactionData txData, String state, GraphDatabaseService databaseService) throws Exception {
+    public TransactionRecorder(TransactionData txData) {
         this.transactionData = txData;
-        this.state = state;
-        this.databaseService = databaseService;
     }
 
     // is supposed we can just make this class static as well as this method
@@ -40,7 +32,6 @@ public class TransactionRecorder {
                     // Delete the DONT_AUDIT node so that it's not peristed to the database
                     node.delete();
 
-//                    log.debug("Transaction contained a %s node so not auditing", DONT_AUDIT);
                     return ;
                 }
             }

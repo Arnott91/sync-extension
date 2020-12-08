@@ -1,18 +1,19 @@
-import org.neo4j.cypher.internal.runtime.slotted.expressions.NodeProperty;
-import org.neo4j.graphdb.*;
-import org.apache.commons.collections.IteratorUtils;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.event.TransactionData;
-import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
+import org.neo4j.graphdb.event.TransactionEventListener;
 
 
-import java.util.List;
-import java.util.Map;
+/**
+ * Protocol is as follows.
+ *
+ * 1. All changes are copied into the integration db (or in a linked list) beforeCommit
+ * 2a. afterCommit the changes are made visble (e.g. connect this linked list into the main linked list)
+ * 2b. afterRollback delete this linked list
+ */
 
-import static java.lang.String.format;
-
-// Definitely shouldn't be a string in the long run...
-public class FederosTransactionEventListenerAdapter extends TransactionEventListenerAdapter<String> {
+public class FederosTransactionEventListenerAdapter implements TransactionEventListener<Node> {
 
 //    private TransactionRecord transactionRecord;
 //    List <Node> newNodeList;
@@ -20,7 +21,7 @@ public class FederosTransactionEventListenerAdapter extends TransactionEventList
 
 
     @Override
-    public String beforeCommit(TransactionData data, Transaction transaction, GraphDatabaseService databaseService)
+    public Node beforeCommit(TransactionData data, Transaction transaction, GraphDatabaseService databaseService)
             throws Exception {
 
         /*newNodeList = IteratorUtils.toList(data.createdNodes().iterator());
@@ -30,28 +31,25 @@ public class FederosTransactionEventListenerAdapter extends TransactionEventList
 
         if (!deletedNodeList.isEmpty()) TransactionCrawler.deletedNodeCrawler(deletedNodeList);
         if (!newNodeList.isEmpty()) TransactionCrawler.nodeCrawler(newNodeList);*/
-        String state = "null";
 
-        TransactionRecorder txRecorder = new TransactionRecorder(data, state, databaseService);
+        TransactionRecorder txRecorder = new TransactionRecorder(data);
         txRecorder.serializeTransaction();
 
 
 
         return null;
+
     }
 
     @Override
-    public void afterCommit(TransactionData data, String state, GraphDatabaseService databaseService) {
-        super.afterCommit(data, state, databaseService);
-        //TransactionRecorder myTransactionRecorder = new TransactionRecorder(data, state, databaService)
-
-
-        // inspect 'data' here and send it to the "integration DB" (using the Java driver on another thread perhaps?)
-       /* if (!newNodeList.isEmpty()) System.out.println(format("Created %d nodes in transaction", IteratorUtils.toArray(newNodeList.iterator()).length));
-        if (!deletedNodeList.isEmpty()) System.out.println(format("Deleted %d nodes in transaction", IteratorUtils.toArray(deletedNodeList.iterator()).length));*/
+    public void afterCommit(TransactionData data, Node startNode, GraphDatabaseService databaseService) {
+        // make our linked list of changes permanent
     }
 
-
+    @Override
+    public void afterRollback(TransactionData transactionData, Node startNode, GraphDatabaseService graphDatabaseService) {
+        // delete our linked list of changes.
+    }
 
 
 }
