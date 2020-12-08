@@ -35,15 +35,12 @@ public class FederosTransactionEventListenerAdapter implements TransactionEventL
         TransactionRecorder txRecorder = new TransactionRecorder(data);
         txRecorder.serializeTransaction();
 
-
-
         return null;
-
     }
 
     @Override
     public void afterCommit(TransactionData data, Node startNode, GraphDatabaseService databaseService) {
-        // make our linked list of changes permanent
+        // make our linked list of changes permanent, including the tx ID which comes from data.getTransactionId()
     }
 
     @Override
