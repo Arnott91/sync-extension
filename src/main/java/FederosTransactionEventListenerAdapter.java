@@ -14,22 +14,26 @@ import static java.lang.String.format;
 // Definitely shouldn't be a string in the long run...
 public class FederosTransactionEventListenerAdapter extends TransactionEventListenerAdapter<String> {
 
-    private TransactionRecord transactionRecord;
-    List <Node> newNodeList;
-    List <Node> deletedNodeList;
+//    private TransactionRecord transactionRecord;
+//    List <Node> newNodeList;
+//    List <Node> deletedNodeList;
 
 
     @Override
     public String beforeCommit(TransactionData data, Transaction transaction, GraphDatabaseService databaseService)
             throws Exception {
 
-        newNodeList = IteratorUtils.toList(data.createdNodes().iterator());
+        /*newNodeList = IteratorUtils.toList(data.createdNodes().iterator());
         deletedNodeList = IteratorUtils.toList(data.deletedNodes().iterator());
 
 
 
         if (!deletedNodeList.isEmpty()) TransactionCrawler.deletedNodeCrawler(deletedNodeList);
-        if (!newNodeList.isEmpty()) TransactionCrawler.nodeCrawler(newNodeList);
+        if (!newNodeList.isEmpty()) TransactionCrawler.nodeCrawler(newNodeList);*/
+        String state = "null";
+
+        TransactionRecorder txRecorder = new TransactionRecorder(data, state, databaseService);
+        txRecorder.serializeTransaction();
 
 
 
@@ -43,19 +47,11 @@ public class FederosTransactionEventListenerAdapter extends TransactionEventList
 
 
         // inspect 'data' here and send it to the "integration DB" (using the Java driver on another thread perhaps?)
-        if (!newNodeList.isEmpty()) System.out.println(format("Created %d nodes in transaction", IteratorUtils.toArray(newNodeList.iterator()).length));
-        if (!deletedNodeList.isEmpty()) System.out.println(format("Deleted %d nodes in transaction", IteratorUtils.toArray(deletedNodeList.iterator()).length));
+       /* if (!newNodeList.isEmpty()) System.out.println(format("Created %d nodes in transaction", IteratorUtils.toArray(newNodeList.iterator()).length));
+        if (!deletedNodeList.isEmpty()) System.out.println(format("Deleted %d nodes in transaction", IteratorUtils.toArray(deletedNodeList.iterator()).length));*/
     }
 
-    private void nodePrinter (List<Node> nodes) {
 
-        for (Node node : nodes) {
-
-            System.out.println(format("A new node with ID %s was created", node.getId()));
-
-        }
-
-    }
 
 
 }
