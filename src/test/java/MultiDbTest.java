@@ -45,8 +45,9 @@ public class MultiDbTest {
         FederosTransactionEventListenerAdapter listener = new FederosTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
-            coreMember.managementService().createDatabase(INTEGRATION_DB_NAME);
         }
+
+        cluster.awaitLeader().managementService().createDatabase(INTEGRATION_DB_NAME);
 
     }
 }
