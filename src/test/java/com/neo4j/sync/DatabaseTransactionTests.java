@@ -37,22 +37,7 @@ public class DatabaseTransactionTests {
         cluster.start();
     }
 
-    @Test
-    void createNodeTest() throws Exception
-    {
-        // Do work here
-        FederosTransactionEventListenerAdapter listener = new FederosTransactionEventListenerAdapter();
-        for (CoreClusterMember coreMember : cluster.coreMembers()) {
-            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
-        }
 
-        cluster.coreTx( ( db, tx ) ->
-        {
-            Node node = tx.createNode( label( "boo" ) );
-            node.setProperty( "foobar", "baz_bat" );
-            tx.commit();
-        } );
-    }
 
     @Test
     void createNodesTest() throws Exception
@@ -189,5 +174,31 @@ public class DatabaseTransactionTests {
             tx.execute("MATCH (t:Test {uuid:'123XYZ'})-[r:CONNECTED_TO]->(t2:Test {uuid:'XYZ123'}) DELETE r");
             tx.commit();
         } );
+    }
+
+    @Test
+    void changeNodePropertyTest() throws Exception
+    {
+        // Do work here
+        FederosTransactionEventListenerAdapter listener = new FederosTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx( ( db, tx ) ->
+        {
+            tx.execute("CREATE (t:Test {uuid:'123XYZ'})");
+            tx.commit();
+
+        } );
+        cluster.coreTx( ( db, tx ) ->
+        {
+            tx.execute("MATCH (t:Test {uuid:'123XYZ'}) SET t.test = 'foo'");
+            tx.commit();
+
+        } );
+
+
+
     }
 }

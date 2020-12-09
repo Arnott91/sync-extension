@@ -3,16 +3,14 @@ package com.neo4j.sync.engine;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
+
 /**
  * com.neo4j.sync.engine.Audit contains information about changes made to an object. It also contains metadata about who
  * made the change and when.
  *
- * @authors KON4987, Chris Upkes
+ * @authors Chris Upkes
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
-@JsonInclude(JsonInclude.Include.NON_NULL)
+
 public class Audit
 {
     private String               changeType;
