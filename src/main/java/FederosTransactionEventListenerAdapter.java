@@ -1,11 +1,12 @@
-import org.neo4j.cypher.internal.expressions.In;
-import org.neo4j.graphdb.*;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListener;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-
 
 import java.util.function.Supplier;
 
@@ -87,13 +88,6 @@ public class FederosTransactionEventListenerAdapter implements TransactionEventL
 //       } return txRecordNode;
 
         return null;
-
-
-
-
-
-
-
     }
 
     @Override
@@ -136,8 +130,6 @@ public class FederosTransactionEventListenerAdapter implements TransactionEventL
 //                this.logException(e, databaseService);
 //
 //            }
-
-
     }
 
     @Override
@@ -187,7 +179,5 @@ public class FederosTransactionEventListenerAdapter implements TransactionEventL
         log.info("Federos Service Extension Event Handler error: " + e.getMessage());
 
     }
-
-
 }
 
