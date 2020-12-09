@@ -1,5 +1,6 @@
 package com.neo4j.sync.listener;
 
+import com.neo4j.sync.engine.TransactionFileLogger;
 import com.neo4j.sync.engine.TransactionRecord;
 import com.neo4j.sync.engine.TransactionRecorder;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -12,15 +13,20 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
+//import java.sql.Timestamp;
 import java.util.function.Supplier;
 
 
 /**
  * Protocol is as follows.
  *
- * 1. All changes are copied into the integration db (or in a linked list) beforeCommit
- * 2a. afterCommit the changes are made visible (e.g. connect this linked list into the main linked list)
- * 2b. afterRollback delete this linked list
+ * The listener adapter is intended to capture client transactions and record tx history for replication.
+ * Change capture happens before commit and logging occurs after.
+ * Transaction records are written locally and pulled by the destination server.
+ * Clients can also read a copy of the transaction history from the transaction replication log files.
+ * @author Chris Upkes
+ * @author Jim Webber
+ *
  */
 
 public class FederosTransactionEventListenerAdapter implements TransactionEventListener<Node> {
@@ -33,26 +39,45 @@ public class FederosTransactionEventListenerAdapter implements TransactionEventL
     private final String TX_RECORD_TX_DATA_KEY = "transactionData";
     private final String TX_RECORD_CREATE_TIME_KEY = "timeCreated";
     private final String AFTER_COMMIT_NODE_TIME_KEY = "commitTime";
-    private long node_id;
-    private boolean replicate;
+    private long transactionTimestamp;
+    private String txData;
+    private boolean logTransaction = false;
+    private boolean replicate = false;
 
     @Override
     public Node beforeCommit(TransactionData data, Transaction transaction, GraphDatabaseService databaseService)
             throws Exception {
 
+        // ge a handle to the transaction recorder.  This will grab information from the Transaction Data object
+        // and populate a transaction record that we can use to both write a TransactionRecord node to the
+        // local database and also to log the transaction in any of the logs.
 
         TransactionRecorder txRecorder = new TransactionRecorder(data);
         TransactionRecord txRecord = txRecorder.serializeTransaction();
-        if (txRecord == null) {
-            this.replicate = false;
-        } else
-        {
+
+        // Check to make sure that we the transaction listener wasn't invoked because we committed a
+        // transactionRecord node to the database.  If the TransactionRecorder encounters
+        // a node with the TransactionRecord label, it will just return null.
+
+        if (txRecord != null) {
             this.replicate = true;
+        } else {
+            this.replicate = false;
         }
+
 
         if (replicate) {
 
+            // let's grab the uuid of the transaction and a timestamp for logging in afterCommit and rollback
+            // methods.
+
             this.beforeCommitTxId = txRecord.getTransactionUUID();
+            this.transactionTimestamp = System.currentTimeMillis();
+            txData = txRecord.getTransactionData();
+
+            // Populate the TransactionRecord node with required transaction replay and history
+            // data and write locally.
+
 
             try (Transaction tx = databaseService.beginTx()) {
                 Node txRecordNode = tx.createNode(Label.label(TX_RECORD_LABEL));
@@ -66,77 +91,51 @@ public class FederosTransactionEventListenerAdapter implements TransactionEventL
                 //this.logException(e, databaseService);
                 System.out.println(e.getMessage());
 
-            }
-        }
-//       if (txRecord != null) {
-//           this.beforeCommitTxId = txRecord.getTransactionUUID();
-//           String myQuery = "MERGE (tr:com.neo4j.sync.engine.TransactionRecord {uuid:1})";
-//           try {
-//               databaseService.executeTransactionally(myQuery);
-//
-//           } catch (Exception e) {
-//               // log exception
-//               this.logException(e, databaseService);
-//
-//           }
-//       } return txRecordNode;
+            } finally
+            {
+                this.logTransaction = true;
 
+
+            }
+        };
+
+        // I tried returning the txRecordNode in the above try - catch statement and I didn't get a handle
+        // to it in the afterCommit.  Should double-check.
         return null;
+//
     }
 
     @Override
     public void afterCommit(TransactionData data, Node startNode, GraphDatabaseService databaseService) {
-        // make our linked list of changes permanent, including the tx ID which comes from data.getTransactionId()
-        // make sure that startNode is the node we created in beforeCommit.
-        // if so, then update it in the database.
-        // for now it is one node per transaction
+        // log our committed transactions to the transaction log.
+        // we can then compare any written nodes in the transaction log that also exist in the rollback logs.
 
-        if (replicate) {
-            try (Transaction tx = databaseService.beginTx()) {
-                Node txRecordNode = tx.findNode(Label.label(TX_RECORD_LABEL), TX_RECORD_NODE_BEFORE_COMMIT_KEY, this.beforeCommitTxId);
-                txRecordNode.setProperty(TX_RECORD_NODE_PRIMARY_KEY, data.getTransactionId());
-                txRecordNode.setProperty(AFTER_COMMIT_NODE_TIME_KEY, data.getCommitTime());
-                tx.commit();
+        if (logTransaction) {
+            try {
 
+                TransactionFileLogger.AppendTransactionLog(this.txData ,this.beforeCommitTxId, data.getTransactionId(), this.transactionTimestamp);
 
             } catch (Exception e) {
                 // log exception
                 //this.logException(e, databaseService);
                 System.out.println(e.getMessage());
 
+            } finally
+            {
+                this.logTransaction = false;
             }
+
         }
-//        String updateQuery = "MATCH (tr:com.neo4j.sync.engine.TransactionRecord) "
-//                + "WHERE tr."
-//                + this.TX_RECORD_NODE_BEFORE_COMMIT_KEY
-//                + "='"
-//                + this.beforeCommitTxId
-//                + "' "
-//                + "SET tr.transactionId = '"
-//                + data.getTransactionId()
-//                + "'";
-//
-//            try  {
-//                databaseService.executeTransactionally(updateQuery);
-//
-//            } catch (Exception e)
-//            {
-//                // log exception
-//                this.logException(e, databaseService);
-//
-//            }
     }
 
     @Override
     public void afterRollback(TransactionData data, Node startNode, GraphDatabaseService databaseService) {
-        // delete our linked list of changes.
-        // for now it is one node per transaction
+        // identify transactions that have rolled backed with their transaction UUID values so that we can
+        // compare to the transaction log and look for written transaction recrods that were rolled back.
 
         if (replicate) {
-            try (Transaction tx = databaseService.beginTx()) {
-                Node txRecordNode = tx.findNode(Label.label(TX_RECORD_LABEL), TX_RECORD_NODE_BEFORE_COMMIT_KEY, this.beforeCommitTxId);
-                txRecordNode.delete();
-                tx.commit();
+            try {
+                TransactionFileLogger.AppendRollbackTransactionLog(this.beforeCommitTxId, this.transactionTimestamp);
 
 
             } catch (Exception e) {
@@ -146,23 +145,7 @@ public class FederosTransactionEventListenerAdapter implements TransactionEventL
 
             }
         }
-//        String deleteQuery = "MATCH (tr:com.neo4j.sync.engine.TransactionRecord) "
-//                + "WHERE tr."
-//                + this.TX_RECORD_NODE_BEFORE_COMMIT_KEY
-//                + "='"
-//                + this.beforeCommitTxId
-//                + "' "
-//                + "DETACH DELETE tr";
-//
-//        try  {
-//            databaseService.executeTransactionally(deleteQuery);
-//
-//        } catch (Exception e)
-//        {
-//            // log exception
-//            this.logException(e, databaseService);
-//
-//        }
+
     }
 
 

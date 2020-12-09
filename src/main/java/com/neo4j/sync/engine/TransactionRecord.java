@@ -1,6 +1,6 @@
 package com.neo4j.sync.engine;
 
-import org.neo4j.graphdb.Node;
+
 
 /**
  * com.neo4j.sync.engine.TransactionRecord contains a collection of audit objects that reflect all of the changes resulting from

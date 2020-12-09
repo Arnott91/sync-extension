@@ -10,6 +10,13 @@ import org.neo4j.graphdb.event.LabelEntry;
 import org.neo4j.graphdb.event.PropertyEntry;
 import org.neo4j.graphdb.event.TransactionData;
 
+/***
+ * The transaction recorder is used to capture and serialize transaction information maintained
+ * by the Neo4j server as part of the transaction handling mechanism.
+ * @author Ravi Anthapu
+ * @author Chris Upkes
+ */
+
 public class TransactionRecorder {
     private final TransactionData transactionData;
 
@@ -17,9 +24,11 @@ public class TransactionRecorder {
         this.transactionData = txData;
     }
 
-    // is supposed we can just make this class static as well as this method
-    // and just pass what is needed for serialization
-    // i.e. public static void serializeTransacition(TransactinData tx, String state, GraphDatabaseServide db)
+   // This method works on the transaction data object passed to the constructor
+    // and returns a new transaction record object that can be used
+    // to write transaction history as a node locally or to a file
+    // or another system.
+
     public TransactionRecord serializeTransaction() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
 
@@ -126,15 +135,10 @@ public class TransactionRecorder {
             audits.add(auditNode.getAudit());
         }
         String data = objectMapper.writeValueAsString(audits);
+
+        // just for dev purposes
+        // TO_DO: remove!
         System.out.println(data);
-
-
-
-//        Node aNode = db.createNode(AUDIT_NODE_LABEL);
-//        aNode.setProperty("timestamp", timestamp);
-//        aNode.setProperty("transactionId", transactionUUID);
-//        aNode.setProperty("status", "NEW");
-//        aNode.setProperty("data", objectMapper.writeValueAsString(audits));
 
         return  new TransactionRecord(timestampCreated, "NEW",  objectMapper.writeValueAsString(audits), transactionUUID);
 
