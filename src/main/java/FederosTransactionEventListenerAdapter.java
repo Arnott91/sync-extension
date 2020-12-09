@@ -32,11 +32,6 @@ public class FederosTransactionEventListenerAdapter implements TransactionEventL
     private long node_id;
     private boolean replicate;
 
-
-
-
-
-
     @Override
     public Node beforeCommit(TransactionData data, Transaction transaction, GraphDatabaseService databaseService)
             throws Exception {

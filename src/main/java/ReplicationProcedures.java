@@ -11,6 +11,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.*;
+
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -20,9 +21,9 @@ public class ReplicationProcedures {
     // how do we test this?
 
     @Context
-    public GraphDatabaseAPI     db;
+    public GraphDatabaseAPI db;
     @Context
-    public Log                  log;
+    public Log log;
 
     @Procedure(value = "replicationStart", mode = Mode.WRITE)
     @Description("starts the replication engine on this server.")
@@ -32,39 +33,35 @@ public class ReplicationProcedures {
         // where to put the boolean on and off logic?
 
         this.scheduledReplicationRunner(sourceDbURI.toString());
-
-
     }
 
-    public void stopReplication(){
+    public void stopReplication() {
         // do something.
         ReplicationSwitch.setOn(false);
     }
 
-    private void replicationRunner(String uri){
+    private void replicationRunner(String uri) {
 
-        while (ReplicationSwitch.isOn()){
+        while (ReplicationSwitch.isOn()) {
             Runnable replicatorThread = new ReplicationThread(db, log, uri);
             // polling mechanism here.
             replicatorThread.run();
         }
     }
+
     private void scheduledReplicationRunner(String uri) throws InterruptedException {
-        while (ReplicationSwitch.isOn())
-        {
+        while (ReplicationSwitch.isOn()) {
             ScheduledExecutorService execService
-                    =   Executors.newScheduledThreadPool(1);
-            execService.scheduleAtFixedRate(()->{
+                    = Executors.newScheduledThreadPool(1);
+            execService.scheduleAtFixedRate(() -> {
                 //The repetitive
                 // By using the scheduler in this fashion, I'm not sure we need a runnable task class
                 // we might be able to just insert the db interaction code here.
                 // I'm thinking we might want to test this in a separate project.
-                System.out.println("hi there at: "+ new java.util.Date());
+                System.out.println("hi there at: " + new java.util.Date());
             }, 0, 60L, TimeUnit.SECONDS);
 
 
         }
     }
-
-
 }
