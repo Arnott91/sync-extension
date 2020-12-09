@@ -107,6 +107,7 @@ public class FederosTransactionEventListenerAdapter implements TransactionEventL
             try (Transaction tx = databaseService.beginTx()) {
                 Node txRecordNode = tx.findNode(Label.label(TX_RECORD_LABEL), TX_RECORD_NODE_BEFORE_COMMIT_KEY, this.beforeCommitTxId);
                 txRecordNode.setProperty(TX_RECORD_NODE_PRIMARY_KEY, data.getTransactionId());
+                txRecordNode.setProperty(AFTER_COMMIT_NODE_TIME_KEY, data.getCommitTime());
                 tx.commit();
 
 
