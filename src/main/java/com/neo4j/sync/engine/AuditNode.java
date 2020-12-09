@@ -1,3 +1,5 @@
+package com.neo4j.sync.engine;
+
 import org.neo4j.graphdb.Node;
 
 class AuditNode

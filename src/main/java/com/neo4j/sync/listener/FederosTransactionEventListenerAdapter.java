@@ -1,3 +1,7 @@
+package com.neo4j.sync.listener;
+
+import com.neo4j.sync.engine.TransactionRecord;
+import com.neo4j.sync.engine.TransactionRecorder;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -22,7 +26,7 @@ import java.util.function.Supplier;
 public class FederosTransactionEventListenerAdapter implements TransactionEventListener<Node> {
 
     private String beforeCommitTxId;
-    private final String TX_RECORD_LABEL = "TransactionRecord";
+    private final String TX_RECORD_LABEL = "com.neo4j.sync.engine.TransactionRecord";
     private final String TX_RECORD_NODE_PRIMARY_KEY = "transactionId";
     private final String TX_RECORD_NODE_BEFORE_COMMIT_KEY = "transactionUUID";
     private final String TX_RECORD_STATUS_KEY = "status";
@@ -57,11 +61,6 @@ public class FederosTransactionEventListenerAdapter implements TransactionEventL
                 txRecordNode.setProperty(TX_RECORD_NODE_BEFORE_COMMIT_KEY, txRecord.getTransactionUUID());
                 txRecordNode.setProperty(TX_RECORD_TX_DATA_KEY, txRecord.getTransactionData());
                 tx.commit();
-
-
-
-
-
             } catch (Exception e) {
                 // log exception
                 //this.logException(e, databaseService);
@@ -71,7 +70,7 @@ public class FederosTransactionEventListenerAdapter implements TransactionEventL
         }
 //       if (txRecord != null) {
 //           this.beforeCommitTxId = txRecord.getTransactionUUID();
-//           String myQuery = "MERGE (tr:TransactionRecord {uuid:1})";
+//           String myQuery = "MERGE (tr:com.neo4j.sync.engine.TransactionRecord {uuid:1})";
 //           try {
 //               databaseService.executeTransactionally(myQuery);
 //
@@ -107,7 +106,7 @@ public class FederosTransactionEventListenerAdapter implements TransactionEventL
 
             }
         }
-//        String updateQuery = "MATCH (tr:TransactionRecord) "
+//        String updateQuery = "MATCH (tr:com.neo4j.sync.engine.TransactionRecord) "
 //                + "WHERE tr."
 //                + this.TX_RECORD_NODE_BEFORE_COMMIT_KEY
 //                + "='"
@@ -147,7 +146,7 @@ public class FederosTransactionEventListenerAdapter implements TransactionEventL
 
             }
         }
-//        String deleteQuery = "MATCH (tr:TransactionRecord) "
+//        String deleteQuery = "MATCH (tr:com.neo4j.sync.engine.TransactionRecord) "
 //                + "WHERE tr."
 //                + this.TX_RECORD_NODE_BEFORE_COMMIT_KEY
 //                + "='"

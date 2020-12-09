@@ -1,3 +1,5 @@
+package com.neo4j.sync.engine;
+
 import org.apache.commons.collections.IteratorUtils;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;

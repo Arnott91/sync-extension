@@ -1,3 +1,6 @@
+package com.neo4j.sync;
+
+import com.neo4j.sync.listener.FederosTransactionEventListenerAdapter;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.configuration.CausalClusteringSettings;
@@ -9,16 +12,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
-import org.neo4j.graphdb.Node;
 import org.neo4j.test.extension.Inject;
 
 import java.net.URI;
+import java.util.Map;
 import java.util.UUID;
 
 import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.driver.Values.parameters;
-import static org.neo4j.graphdb.Label.label;
 
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
 @ClusterExtension
@@ -60,8 +61,7 @@ public class PullFromRemoteClusterIT {
         // Create some data
         sourceCluster.coreTx(INTEGRATION_DB_NAME,  ( db, tx ) ->
         {
-            Node node = tx.createNode( label( "boo" ) );
-            node.setProperty( "foobar", "baz_bat" );
+            tx.execute("MERGE (:Person {name:'Rosa'})-[:FOLLOWS]->(:Person {name:'Karl'})");
             tx.commit();
         } );
     }
@@ -72,13 +72,19 @@ public class PullFromRemoteClusterIT {
         Driver driver = GraphDatabase.driver(new URI("neo4j://"+sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"));
 
         try (Session session = driver.session(SessionConfig.builder().withDatabase(INTEGRATION_DB_NAME).build())) {
-            Result result = session.run(("MATCH (n) RETURN (n)"));
+            Result result = session.run(("MATCH (n)-[r]->() RETURN n, r"));
 
             while (result.hasNext())
             {
                 Record record = result.next();
-                // Values can be extracted from a record by index or name.
-                System.out.println(record);
+                Map<String, Object> records = record.asMap();
+                for (String key : records.keySet()) {
+                    System.out.println(key +" --> " + records.get(key));
+
+                    for (String recordKey : records.keySet()) {
+                        System.out.println(recordKey +" --> " + records.get(recordKey));
+                    }
+                }
             }
         }
 

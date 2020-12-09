@@ -1,3 +1,6 @@
+package com.neo4j.sync;
+
+import com.neo4j.sync.listener.FederosTransactionEventListenerAdapter;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.configuration.CausalClusteringSettings;
@@ -8,7 +11,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
 import org.neo4j.test.extension.Inject;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;

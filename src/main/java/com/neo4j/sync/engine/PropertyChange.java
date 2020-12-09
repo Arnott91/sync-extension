@@ -1,3 +1,5 @@
+package com.neo4j.sync.engine;
+
 import java.util.*;
 
 public class PropertyChange {

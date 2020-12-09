@@ -1,4 +1,4 @@
-
+package com.neo4j.sync.engine;
 
 import java.util.List;
 import java.util.Map;
@@ -6,7 +6,7 @@ import java.util.Map;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 /**
- * Audit contains information about changes made to an object. It also contains metadata about who
+ * com.neo4j.sync.engine.Audit contains information about changes made to an object. It also contains metadata about who
  * made the change and when.
  *
  * @authors KON4987, Chris Upkes
@@ -152,7 +152,7 @@ public class Audit
     @Override
     public String toString()
     {
-        return "Audit{"
+        return "com.neo4j.sync.engine.Audit{"
                 + "primaryKey="
                 + primaryKey
                 + "nodeKey="

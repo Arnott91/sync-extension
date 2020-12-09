@@ -1,3 +1,5 @@
+package com.neo4j.sync.engine;
+
 import org.neo4j.driver.*;
 import org.neo4j.graphdb.Node;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -30,7 +32,7 @@ public class ReplicationThread  implements Runnable {
         try (Session replicationSession = getSession()) {
 
 //
-            Result txResult = replicationSession.run("MATCH (tr:TransactionRecord) RETURN tr.transactionId, transactionData");
+            Result txResult = replicationSession.run("MATCH (tr:com.neo4j.sync.engine.TransactionRecord) RETURN tr.transactionId, transactionData");
 
 //            org.neo4j.graphdb.Transaction tx = db.beginTx();
 //            // break down json into nodes and relationships

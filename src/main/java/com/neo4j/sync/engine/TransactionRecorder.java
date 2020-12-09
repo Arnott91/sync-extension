@@ -1,3 +1,5 @@
+package com.neo4j.sync.engine;
+
 import java.sql.Timestamp;
 import java.util.*;
 
@@ -34,7 +36,7 @@ public class TransactionRecorder {
                     node.delete();
 
                     return null;
-                } else if (l.name().equalsIgnoreCase("TransactionRecord")) {
+                } else if (l.name().equalsIgnoreCase("com.neo4j.sync.engine.TransactionRecord")) {
                     return null;
                 }
             }
@@ -203,7 +205,7 @@ public class TransactionRecorder {
         else
         {
             // Look if this node has deleted node changes.
-            // If so we need to look at the AuditNode captured
+            // If so we need to look at the com.neo4j.sync.engine.AuditNode captured
             // for this deleted node to read label and properties.
             deletedNode = nodeChanges.get(AuditNode.DELETE_NODE);
         }
@@ -298,7 +300,7 @@ public class TransactionRecorder {
             if (auditNode.getAudit().getNodeLabels() != null)
             {
                 // We will populate properties only if the node label is set. This won't be set for
-                // Audit or Event nodes.
+                // com.neo4j.sync.engine.Audit or Event nodes.
                 auditNode.getAudit().getAllProperties().put(propertyEntry.key(),
                         propertyEntry.previouslyCommittedValue());
                 auditNode.getAudit().setPrimaryKey(getDeletedNodePrimaryKey(auditNode));

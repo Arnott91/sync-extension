@@ -1,3 +1,6 @@
+package com.neo4j.sync;
+
+import com.neo4j.sync.listener.FederosTransactionEventListenerAdapter;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.configuration.CausalClusteringSettings;
