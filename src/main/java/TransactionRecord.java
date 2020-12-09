@@ -1,8 +1,4 @@
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
-
-import java.util.ArrayList;
-import java.util.List;
+import org.neo4j.graphdb.Node;
 
 /**
  * TransactionRecord contains a collection of audit objects that reflect all of the changes resulting from
@@ -10,18 +6,43 @@ import java.util.List;
  *
  * @author Chris Upkes
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
-@JsonInclude(JsonInclude.Include.NON_NULL)
+
 public class TransactionRecord {
-    private List<Audit> auditList = new ArrayList<>();
+    public TransactionRecord(String timestampCreated, String status, String transactionData, String transactionUUID)
+    {
 
-    public void addAudit (Audit audit) {
-        this.auditList.add(audit);
+        this.timestampCreated = timestampCreated;
+        this.status = status;
+        this.transactionData = transactionData;
+        this.transactionUUID = transactionUUID;
     }
 
-    public void setAuditList(List<Audit> auditList) {
-        this.auditList = auditList;
+
+    private String timestampCreated;
+    private String status;
+    private String transactionData;
+    private String transactionUUID;
+
+
+    public String getTransactionData() {
+        return transactionData;
     }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public String getTimestampCreated() {
+        return timestampCreated;
+    }
+
+
+    public String getTransactionUUID() {
+        return transactionUUID;
+    }
+
 
 }
+
+
 

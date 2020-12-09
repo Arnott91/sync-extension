@@ -1,3 +1,4 @@
+import java.sql.Timestamp;
 import java.util.*;
 
 
@@ -17,7 +18,7 @@ public class TransactionRecorder {
     // is supposed we can just make this class static as well as this method
     // and just pass what is needed for serialization
     // i.e. public static void serializeTransacition(TransactinData tx, String state, GraphDatabaseServide db)
-    public void serializeTransaction() throws Exception {
+    public TransactionRecord serializeTransaction() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
 
         HashMap<Node, Map<String, AuditNode>> auditValues = new HashMap<>();
@@ -32,7 +33,9 @@ public class TransactionRecorder {
                     // Delete the DONT_AUDIT node so that it's not peristed to the database
                     node.delete();
 
-                    return ;
+                    return null;
+                } else if (l.name().equalsIgnoreCase("TransactionRecord")) {
+                    return null;
                 }
             }
         }
@@ -87,6 +90,12 @@ public class TransactionRecorder {
         // Generates audit
         List<AuditNode> nodesToProcess = new ArrayList<>();
         String transactionUUID = java.util.UUID.randomUUID().toString();
+        //Long transactionId = transactionData.getTransactionId();
+        Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+        String timestampCreated = timestamp.toString();
+
+
+
         for (Map<String, AuditNode> auditProps : auditValues.values())
         {
             for (AuditNode auditNode : auditProps.values())
@@ -117,7 +126,19 @@ public class TransactionRecorder {
         String data = objectMapper.writeValueAsString(audits);
         System.out.println(data);
 
+
+
+//        Node aNode = db.createNode(AUDIT_NODE_LABEL);
+//        aNode.setProperty("timestamp", timestamp);
+//        aNode.setProperty("transactionId", transactionUUID);
+//        aNode.setProperty("status", "NEW");
+//        aNode.setProperty("data", objectMapper.writeValueAsString(audits));
+
+        return  new TransactionRecord(timestampCreated, "NEW",  objectMapper.writeValueAsString(audits), transactionUUID);
+
     }
+
+
 
     // This method is used to create audit records for added and deleted nodes
     private void processAddRemoveNode(Node node, Map<Node, Map<String, AuditNode>> auditValues,
