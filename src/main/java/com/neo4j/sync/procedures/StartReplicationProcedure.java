@@ -11,11 +11,6 @@ import org.neo4j.procedure.Procedure;
 public class StartReplicationProcedure {
     private ReplicationEngine replicationEngine;
 
-    @Context
-    public GraphDatabaseAPI db;
-    @Context
-    public Log log;
-
     public StartReplicationProcedure(ReplicationEngine replicationEngine) {
         this.replicationEngine = replicationEngine;
     }

@@ -12,13 +12,7 @@ import org.neo4j.procedure.Procedure;
 public class StopReplicationProcedure {
     private ReplicationEngine replicationEngine;
 
-    @Context
-    public GraphDatabaseAPI db;
-    @Context
-    public Log log;
-
     public StopReplicationProcedure(ReplicationEngine replicationEngine) {
-
         this.replicationEngine = replicationEngine;
     }
 
