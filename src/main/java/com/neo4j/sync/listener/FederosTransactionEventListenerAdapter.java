@@ -12,8 +12,6 @@ import org.neo4j.graphdb.event.TransactionEventListener;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-
-//import java.sql.Timestamp;
 import java.util.function.Supplier;
 
 
@@ -33,12 +31,10 @@ public class FederosTransactionEventListenerAdapter implements TransactionEventL
 
     private String beforeCommitTxId;
     private final String TX_RECORD_LABEL = "com.neo4j.sync.engine.TransactionRecord";
-    private final String TX_RECORD_NODE_PRIMARY_KEY = "transactionId";
     private final String TX_RECORD_NODE_BEFORE_COMMIT_KEY = "transactionUUID";
     private final String TX_RECORD_STATUS_KEY = "status";
     private final String TX_RECORD_TX_DATA_KEY = "transactionData";
     private final String TX_RECORD_CREATE_TIME_KEY = "timeCreated";
-    private final String AFTER_COMMIT_NODE_TIME_KEY = "commitTime";
     private long transactionTimestamp;
     private String txData;
     private boolean logTransaction = false;
@@ -59,11 +55,7 @@ public class FederosTransactionEventListenerAdapter implements TransactionEventL
         // transactionRecord node to the database.  If the TransactionRecorder encounters
         // a node with the TransactionRecord label, it will just return null.
 
-        if (txRecord != null) {
-            this.replicate = true;
-        } else {
-            this.replicate = false;
-        }
+        this.replicate = txRecord != null;
 
 
         if (replicate) {
@@ -97,7 +89,7 @@ public class FederosTransactionEventListenerAdapter implements TransactionEventL
 
 
             }
-        };
+        }
 
         // I tried returning the txRecordNode in the above try - catch statement and I didn't get a handle
         // to it in the afterCommit.  Should double-check.

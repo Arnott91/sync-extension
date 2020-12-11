@@ -111,6 +111,42 @@ public class DatabaseTransactionTests {
     }
 
     @Test
+    void createRelationshipPropertiesTest() throws Exception
+    {
+        // Do work here
+        FederosTransactionEventListenerAdapter listener = new FederosTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx( ( db, tx ) ->
+        {
+            tx.execute("CREATE (t:Test {uuid:'123XYZ'})-[:CONNECTED_TO {weight:123}]->(t2:Test {uuid:'XYZ123'})");
+            tx.commit();
+        } );
+
+
+    }
+
+    @Test
+    void createThreeNodesAndTwoRelationshipsTest() throws Exception
+    {
+        // Do work here
+        FederosTransactionEventListenerAdapter listener = new FederosTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx( ( db, tx ) ->
+        {
+            tx.execute("MERGE (t:Test {uuid:'123XYZ'})-[:CONNECTED_TO]->(t2:Test {uuid:'XYZ123'}) MERGE (t)-[:LIKES]->(t3:Movie {uuid:'ABC'})");
+            tx.commit();
+        } );
+
+
+    }
+
+    @Test
     void deleteExistingNodeTest() throws Exception
     {
         // Do work here
@@ -177,6 +213,23 @@ public class DatabaseTransactionTests {
     }
 
     @Test
+    void createNodesAndPropertyTest() throws Exception
+    {
+        // Do work here
+        FederosTransactionEventListenerAdapter listener = new FederosTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx( ( db, tx ) ->
+        {
+            tx.execute("CREATE (t:Test {uuid:'123XYZ'}) SET t.testProperty= 'foo';");
+            tx.execute("CREATE (t2:Test {uuid:'XZY123'}) SET t2.testProperty = 'bar'");
+            tx.commit();
+        } );
+    }
+
+    @Test
     void changeNodePropertyTest() throws Exception
     {
         // Do work here
@@ -197,6 +250,8 @@ public class DatabaseTransactionTests {
             tx.commit();
 
         } );
+
+
 
 
 

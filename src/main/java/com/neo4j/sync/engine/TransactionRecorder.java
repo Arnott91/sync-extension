@@ -4,7 +4,7 @@ import java.sql.Timestamp;
 import java.util.*;
 
 
-import org.codehaus.jackson.map.ObjectMapper; // need to add the jackson library to the maven dependencies
+import org.codehaus.jackson.map.ObjectMapper;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.event.LabelEntry;
 import org.neo4j.graphdb.event.PropertyEntry;
@@ -165,9 +165,7 @@ public class TransactionRecorder {
             if (changeType.equalsIgnoreCase(AuditNode.ADD_NODE))
             {
                 List<String> nodeLabels = new ArrayList<>();
-                node.getLabels().forEach(entry -> {
-                    nodeLabels.add(entry.name());
-                });
+                node.getLabels().forEach(entry -> nodeLabels.add(entry.name()));
 
                 auditNode.getAudit().setNodeLabels(nodeLabels);
 
