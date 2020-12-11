@@ -22,7 +22,7 @@ public class GraphWriter {
     private  GraphDatabaseAPI graphDb;
     private Log log;
 
-    public GraphWriter(JSONObject graphTransaction) throws JSONException {
+    public GraphWriter(JSONObject graphTransaction, GraphDatabaseService graphDb) throws JSONException {
 
         // split the transactionEvents JSON into a list of separate events
 
@@ -73,8 +73,16 @@ public class GraphWriter {
             case DELETE_NODE: this.deleteNodes(event);
             case DELETE_RELATION: this.deleteRelation(event);
             case ADD_RELATION: this.addRelation(event);
+            case ADD_RELATION_PROPERTY: this.addRelationProperties(event);
+            case REMOVE_RELATION_PROPERTY: this.removeRelationProperties(event);
         }
 
+    }
+
+    private void removeRelationProperties(JSONObject event) {
+    }
+
+    private void addRelationProperties(JSONObject event) {
     }
 
     private void addRelation(JSONObject event) throws JSONException {

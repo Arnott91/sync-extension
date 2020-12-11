@@ -2,14 +2,18 @@ package com.neo4j.sync;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.sync.engine.GraphWriter;
 import com.neo4j.sync.listener.AuditTransactionEventListenerAdapter;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.codehaus.jettison.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.test.extension.Inject;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -251,5 +255,17 @@ public class DatabaseTransactionTests {
             tx.commit();
 
         });
+    }
+
+    @Test
+    void graphWriterInitTest() throws Exception {
+        // Do work here
+        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+        JSONObject json = new JSONObject();
+        GraphDatabaseService db = cluster.getMemberWithAnyRole(DEFAULT_DATABASE_NAME, Role.LEADER).database(DEFAULT_DATABASE_NAME);
+        GraphWriter writer = new GraphWriter(json, db);
     }
 }
