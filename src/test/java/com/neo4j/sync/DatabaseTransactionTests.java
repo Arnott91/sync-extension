@@ -105,6 +105,63 @@ public class DatabaseTransactionTests {
     }
 
     @Test
+    void createMultipleRelationshipsTest() throws Exception {
+        // Do work here
+        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx((db, tx) ->
+        {
+            tx.execute("CREATE (t:Test {uuid:'123XYZ'})-[:CONNECTED_TO]->(t2:Test {uuid:'XYZ123'})");
+            tx.execute("MERGE (t:Test {uuid:'123XYZ'})-[:LIKES]->(t2:Test {uuid:'001'})");
+            tx.commit();
+        });
+
+
+    }
+
+    @Test
+    void addRelationshipsPropertiesTest() throws Exception {
+        // Do work here
+        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx((db, tx) ->
+        {
+            tx.execute("CREATE (t:Test {uuid:'123XYZ'})-[:CONNECTED_TO]->(t2:Test {uuid:'XYZ123'})");
+            tx.execute("MERGE (t:Test {uuid:'123XYZ'})-[:LIKES {weight:123}]->(t2:Test {uuid:'001'})");
+            tx.commit();
+        });
+
+
+    }
+
+
+    @Test
+    void deleteRelationshipsTest() throws Exception {
+        // Do work here
+        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx((db, tx) ->
+        {
+            tx.execute("CREATE (t:Test {uuid:'123XYZ'})-[:CONNECTED_TO]->(t2:Test {uuid:'XYZ123'})");
+            tx.commit();
+            tx.execute("MATCH (t:Test {uuid:'123XYZ'})-[r:CONNECTED_TO]->(t2:Test {uuid:'XYZ123'}) DELETE r");
+            tx.commit();
+
+        });
+
+
+    }
+
+    @Test
     void deleteExistingNodeTest() throws Exception {
         // Do work here
         AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
