@@ -78,6 +78,27 @@ public class DatabaseTransactionTests {
     }
 
     @Test
+    void addNodePropertiesTest() throws Exception {
+        // Do work here
+        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx((db, tx) ->
+        {
+            tx.execute("CREATE (t:Test {uuid:'123XYZ'})");
+            tx.commit();
+        });
+
+        cluster.coreTx((db, tx) ->
+        {
+            tx.execute("MERGE (t:Test {uuid:'123XYZ'}) SET t.name='foo'");
+            tx.commit();
+        });
+    }
+
+    @Test
     void mergeExistingNodeTest() throws Exception {
         // Do work here
         AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
@@ -265,6 +286,28 @@ public class DatabaseTransactionTests {
     }
 
     @Test
+    void removeNodeProzpertyTest() throws Exception {
+        // Do work here
+        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx((db, tx) ->
+        {
+            tx.execute("CREATE (t:Test {uuid:'123XYZ'}) SET t.test = 'foo'");
+            tx.commit();
+
+        });
+        cluster.coreTx((db, tx) ->
+        {
+            tx.execute("MATCH (t:Test {uuid:'123XYZ'}) REMOVE t.test");
+            tx.commit();
+
+        });
+    }
+
+    @Test
     void graphWriterAddNodeTest() throws Exception {
         // Do work here
         String ADD_NODE = "{\"transactionEvents\":[{\"changeType\":\"AddNode\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":null,\"targetNodeLabels\":null,\"targetPrimaryKey\":null,\"properties\":null,\"allProperties\":{\"uuid\":\"123XYZ\"},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";
@@ -280,6 +323,110 @@ public class DatabaseTransactionTests {
         writer.executeCRUDOperation();
 
     }
+
+    @Test
+    void graphWriterDeleteNodeTest() throws Exception {
+        // Do work here
+        String DELETE_NODE = "{\"transactionEvents\":[{\"changeType\":\"DeleteNode\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":null,\"targetNodeLabels\":null,\"targetPrimaryKey\":null,\"properties\":null,\"allProperties\":{\"uuid\":\"123XYZ\"},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";
+        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+
+        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(DELETE_NODE);
+        GraphDatabaseService graphDb = cluster.getMemberWithAnyRole(DEFAULT_DATABASE_NAME, Role.LEADER).database(DEFAULT_DATABASE_NAME);
+        GraphWriter writer = new GraphWriter(graphTxTranslation, graphDb);
+        writer.executeCRUDOperation();
+
+    }
+
+    @Test
+    void graphWriterPropertyChangeTest() throws Exception {
+        // Do work here
+        String ADD_NODE = "{\"transactionEvents\":[{\"changeType\":\"NodePropertyChange\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":null,\"targetNodeLabels\":null,\"targetPrimaryKey\":null,\"properties\":[{\"propertyName\":\"name\",\"oldValue\":null,\"newValue\":\"foo\"}],\"allProperties\":{\"name\":\"foo\",\"uuid\":\"123XYZ\"},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";
+        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+
+        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
+        GraphDatabaseService graphDb = cluster.getMemberWithAnyRole(DEFAULT_DATABASE_NAME, Role.LEADER).database(DEFAULT_DATABASE_NAME);
+        GraphWriter writer = new GraphWriter(graphTxTranslation, graphDb);
+        writer.executeCRUDOperation();
+
+    }
+
+    @Test
+    void graphWriterRemovePropertiesTest() throws Exception {
+        // Do work here
+        String ADD_NODE = "{\"transactionEvents\":[{\"changeType\":\"AddNode\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":null,\"targetNodeLabels\":null,\"targetPrimaryKey\":null,\"properties\":null,\"allProperties\":{\"uuid\":\"123XYZ\"},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";
+        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+
+        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
+        GraphDatabaseService graphDb = cluster.getMemberWithAnyRole(DEFAULT_DATABASE_NAME, Role.LEADER).database(DEFAULT_DATABASE_NAME);
+        GraphWriter writer = new GraphWriter(graphTxTranslation, graphDb);
+        writer.executeCRUDOperation();
+
+    }
+
+    @Test
+    void graphWriterAddRelationTest() throws Exception {
+        // Do work here
+        String ADD_NODE = "{\"transactionEvents\":[{\"changeType\":\"AddRelation\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":\"CONNECTED_TO\",\"targetNodeLabels\":[\"Test\"],\"targetPrimaryKey\":{\"uuid\":\"XYZ123\"},\"properties\":null,\"allProperties\":{},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null},{\"changeType\":\"AddNode\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":null,\"targetNodeLabels\":null,\"targetPrimaryKey\":null,\"properties\":null,\"allProperties\":{\"uuid\":\"123XYZ\"},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null},{\"changeType\":\"AddNode\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"XYZ123\"},\"nodeKey\":null,\"relationshipLabel\":null,\"targetNodeLabels\":null,\"targetPrimaryKey\":null,\"properties\":null,\"allProperties\":{\"uuid\":\"XYZ123\"},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";
+        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+
+        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
+        GraphDatabaseService graphDb = cluster.getMemberWithAnyRole(DEFAULT_DATABASE_NAME, Role.LEADER).database(DEFAULT_DATABASE_NAME);
+        GraphWriter writer = new GraphWriter(graphTxTranslation, graphDb);
+        writer.executeCRUDOperation();
+
+    }
+
+    @Test
+    void graphWriterAddRelationPropertiesTest() throws Exception {
+        // Do work here
+        String ADD_NODE = "{\"transactionEvents\":[{\"changeType\":\"AddNode\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":null,\"targetNodeLabels\":null,\"targetPrimaryKey\":null,\"properties\":null,\"allProperties\":{\"uuid\":\"123XYZ\"},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";
+        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+
+        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
+        GraphDatabaseService graphDb = cluster.getMemberWithAnyRole(DEFAULT_DATABASE_NAME, Role.LEADER).database(DEFAULT_DATABASE_NAME);
+        GraphWriter writer = new GraphWriter(graphTxTranslation, graphDb);
+        writer.executeCRUDOperation();
+
+    }
+
+    @Test
+    void graphWriterRemoveRelationPropertiesTest() throws Exception {
+        // Do work here
+        String ADD_NODE = "{\"transactionEvents\":[{\"changeType\":\"AddNode\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":null,\"targetNodeLabels\":null,\"targetPrimaryKey\":null,\"properties\":null,\"allProperties\":{\"uuid\":\"123XYZ\"},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";
+        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+
+        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
+        GraphDatabaseService graphDb = cluster.getMemberWithAnyRole(DEFAULT_DATABASE_NAME, Role.LEADER).database(DEFAULT_DATABASE_NAME);
+        GraphWriter writer = new GraphWriter(graphTxTranslation, graphDb);
+        writer.executeCRUDOperation();
+
+    }
+
+
 
     // BEGIN - Federos-specific tests
 
