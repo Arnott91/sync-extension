@@ -12,6 +12,17 @@
 
     <dependencies>
         <dependency>
+            <groupId>eu.michael-simons.neo4j</groupId>
+            <artifactId>junit-jupiter-causal-cluster-testcontainer-extension</artifactId>
+            <version>2020.0.5</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.scijava</groupId>
+                    <artifactId>native-lib-loader</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>neo4j-enterprise</artifactId>
             <version>4.2.1</version>
