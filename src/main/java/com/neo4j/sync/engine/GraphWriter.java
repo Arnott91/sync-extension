@@ -43,8 +43,8 @@ public class GraphWriter {
                         this.delegateCRUDOperation(v,ChangeType.DELETE_NODE);
                     case "addProperty":
                         this.delegateCRUDOperation(v,ChangeType.ADD_PROPERTY);
-                    case "removeProperty":
-                        this.delegateCRUDOperation(v,ChangeType.REMOVE_PROPERTY);
+                    case "NodePropertyChange":
+                        this.delegateCRUDOperation(v,ChangeType.NODE_PROPERTY_CHANGE);
                     case "addRelation":
                         this.delegateCRUDOperation(v,ChangeType.ADD_RELATION);
                     case "deleteRelation":
@@ -52,7 +52,7 @@ public class GraphWriter {
                     case "addRelationProperty":
                         this.delegateCRUDOperation(v,ChangeType.ADD_RELATION_PROPERTY);
                     case "removeRelationProperty":
-                        this.delegateCRUDOperation(v,ChangeType.REMOVE_RELATION_PROPERTY);
+                        this.delegateCRUDOperation(v,ChangeType.RELATION_PROPERTY_CHANGE);
                     default:
                 }
 
@@ -67,21 +67,98 @@ public class GraphWriter {
         switch (changeType) {
             case ADD_NODE: this.addNode(event);
             case ADD_PROPERTY: this.addProperties(event);
-            case REMOVE_PROPERTY: this.removeProperties(event);
+            case NODE_PROPERTY_CHANGE: this.changeNodeProperties(event);
             case DELETE_NODE: this.deleteNodes(event);
             case DELETE_RELATION: this.deleteRelation(event);
             case ADD_RELATION: this.addRelation(event);
             case ADD_RELATION_PROPERTY: this.addRelationProperties(event);
-            case REMOVE_RELATION_PROPERTY: this.removeRelationProperties(event);
+            case RELATION_PROPERTY_CHANGE: this.changeRelationProperties(event);
         }
+
+    }
+
+    private void changeRelationProperties(JSONObject event) throws JSONException {
+
+        NodeFinder finder = new NodeFinder(event);
+        Label startSearchLabel = finder.getSearchLabel(NodeDirection.START);
+        Label targetSearchLabel = finder.getSearchLabel(NodeDirection.TARGET);
+
+        String[] startPrimaryKey = finder.getPrimaryKey(NodeDirection.START);
+        String[] targetPrimaryKey = finder.getPrimaryKey(NodeDirection.TARGET);
+        Map<String, String> properties = TransactionDataParser.getChangedProperties(event);
+        String[] removedProperties = TransactionDataParser.getRemovedProperties(event);
+
+
+
+
+        try (Transaction tx = graphDb.beginTx()) {
+            Node startNode = tx.findNode(startSearchLabel,startPrimaryKey[0],startPrimaryKey[1]);
+            Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0],targetPrimaryKey[1]);
+            Relationship singleRelationship = startNode.getSingleRelationship(RelationshipType.withName(TransactionDataParser.getRelationType(event)), Direction.OUTGOING);
+            for (int i = 0; i < removedProperties.length; i++){
+                singleRelationship.removeProperty(removedProperties[i]);
+            }
+            if (properties.size() > 0) properties.forEach(singleRelationship::setProperty);
+
+
+            tx.commit();
+        } catch (Exception e) {
+            // log exception
+            //this.logException(e, databaseService);
+            System.out.println(e.getMessage());
+
+        } finally
+        {
+            log.info("proc write complete");
+
+
+        }
+    }
+
+    private void changeProperties(JSONObject event) {
+
+        // first--go get the list of properties to remove
+        // then go get the properties to change
 
     }
 
     private void removeRelationProperties(JSONObject event) {
     }
 
-    private void addRelationProperties(JSONObject event) {
+    private void addRelationProperties(JSONObject event) throws JSONException {
+
+        NodeFinder finder = new NodeFinder(event);
+        Label startSearchLabel = finder.getSearchLabel(NodeDirection.START);
+        Label targetSearchLabel = finder.getSearchLabel(NodeDirection.TARGET);
+
+        String[] startPrimaryKey = finder.getPrimaryKey(NodeDirection.START);
+        String[] targetPrimaryKey = finder.getPrimaryKey(NodeDirection.TARGET);
+        Map<String, String> properties = TransactionDataParser.getRelationProperties(event);
+
+
+
+
+        try (Transaction tx = graphDb.beginTx()) {
+            Node startNode = tx.findNode(startSearchLabel,startPrimaryKey[0],startPrimaryKey[1]);
+            Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0],targetPrimaryKey[1]);
+            Relationship singleRelationship = startNode.getSingleRelationship(RelationshipType.withName(TransactionDataParser.getRelationType(event)), Direction.OUTGOING);
+            if (properties.size() > 0) properties.forEach(singleRelationship::setProperty);
+
+
+            tx.commit();
+        } catch (Exception e) {
+            // log exception
+            //this.logException(e, databaseService);
+            System.out.println(e.getMessage());
+
+        } finally
+        {
+            log.info("proc write complete");
+
+
+        }
     }
+
 
     private void addRelation(JSONObject event) throws JSONException {
 
@@ -170,22 +247,32 @@ public class GraphWriter {
         }
     }
 
-    private void removeProperties(JSONObject event) throws JSONException {
+    private void changeNodeProperties(JSONObject event) throws JSONException {
+
+        // not very elegant, but works.  Might be able to make a little less verbose
+        // without being cryptic.
 
         NodeFinder finder = new NodeFinder(event);
         Label searchLabel = finder.getSearchLabel();
         String[] primaryKey = finder.getPrimaryKey();
-        Map<String, String> properties = TransactionDataParser.getNodeProperties(event);
+        Map<String, String> changedProperties = TransactionDataParser.getChangedProperties(event);
+        String[] removedPropertyKeys = TransactionDataParser.getRemovedProperties(event);
         // we need the primary key to find the node
 
         try (Transaction tx = graphDb.beginTx()) {
             Node foundNode = tx.findNode(searchLabel,primaryKey[0],primaryKey[1]);
-            for (Map.Entry<String, String> entry : properties.entrySet()) {
+
+            for (int i = 0; i < removedPropertyKeys.length; i++) {
+                foundNode.removeProperty(removedPropertyKeys[i]);
+            }
+
+            for (Map.Entry<String, String> entry : changedProperties.entrySet()) {
                 String k = entry.getKey();
                 String v = entry.getValue();
-                foundNode.removeProperty(k);
+                foundNode.setProperty(k,v);
             }
             tx.commit();
+
         } catch (Exception e) {
             // log exception
             //this.logException(e, databaseService);

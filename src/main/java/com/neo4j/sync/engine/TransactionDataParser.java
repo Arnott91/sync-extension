@@ -3,6 +3,7 @@ package com.neo4j.sync.engine;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import scala.util.parsing.json.JSON;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,8 +39,8 @@ public class TransactionDataParser {
 
 
 
-        for (int i = 0; i > events.length(); i++)  {
-            JSONObject event = (JSONObject) events.get(i);
+        for (int i = 0; i < events.length(); i++)  {
+             JSONObject event = (JSONObject) events.get(i);
            changeTypeEventMap.put(event.get("changeType").toString(), event);
            eventsList.add(changeTypeEventMap);
         };
@@ -102,6 +103,49 @@ public class TransactionDataParser {
             case TARGET: return nodeEvent.get("targetLabels").toString().split(",");
             default: return null;
         }
+
+    }
+
+    public static Map<String, String> getChangedProperties(JSONObject event) throws JSONException{
+
+
+
+        JSONArray beforeAndAfterArray = event.getJSONArray("properties");
+
+        Map<String, String> changedProperties = new HashMap<>();
+
+
+        for (int i = 0; i < beforeAndAfterArray.length(); i++){
+
+            JSONObject banda = (JSONObject) beforeAndAfterArray.get(i);
+            if (!banda.get("newValue").equals(null)) {
+                changedProperties.put(banda.getString("propertyName"), banda.getString("newValue"));
+            }
+
+
+        }
+        return changedProperties;
+
+
+    }
+
+    public static String[] getRemovedProperties(JSONObject nodeEvent) throws JSONException {
+
+        JSONArray beforeAndAfterArray = nodeEvent.getJSONArray("properties");
+
+        List<String> removed = new ArrayList<>();
+
+        for (int i = 0; i < beforeAndAfterArray.length(); i++){
+
+            JSONObject banda = (JSONObject) beforeAndAfterArray.get(i);
+            if (banda.get("newValue").equals(null)){
+                removed.add(banda.get("propertyName").toString());
+
+            }
+
+
+        }
+        return removed.toArray(new String[removed.size()]);
 
     }
 

@@ -286,7 +286,7 @@ public class DatabaseTransactionTests {
     }
 
     @Test
-    void removeNodeProzpertyTest() throws Exception {
+    void removeNodePropertyTest() throws Exception {
         // Do work here
         AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
@@ -302,6 +302,50 @@ public class DatabaseTransactionTests {
         cluster.coreTx((db, tx) ->
         {
             tx.execute("MATCH (t:Test {uuid:'123XYZ'}) REMOVE t.test");
+            tx.commit();
+
+        });
+    }
+
+    @Test
+    void NodePropertyChangeTest2() throws Exception {
+        // Do work here
+        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx((db, tx) ->
+        {
+            tx.execute("CREATE (t:Test {uuid:'123XYZ'}) SET t.test = 'foo'");
+            tx.commit();
+
+        });
+        cluster.coreTx((db, tx) ->
+        {
+            tx.execute("MATCH (t:Test {uuid:'123XYZ'}) SET t.test= 'bar'");
+            tx.commit();
+
+        });
+    }
+
+    @Test
+    void RelationPropertyChangeTest() throws Exception {
+        // Do work here
+        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx((db, tx) ->
+        {
+            tx.execute("CREATE (t:Test {uuid:'123XYZ'})-[:CONNECTED_TO {weight:1}]->(t2:Test {uuid:'XYZ123'})");
+            tx.commit();
+
+        });
+        cluster.coreTx((db, tx) ->
+        {
+            tx.execute("MATCH (t:Test {uuid:'123XYZ'})-[r:CONNECTED_TO {weight:1}]->(t2:Test {uuid:'XYZ123'}) SET r.weight = 2");
             tx.commit();
 
         });
