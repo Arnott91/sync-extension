@@ -264,8 +264,127 @@ public class DatabaseTransactionTests {
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
+
+
         JSONObject json = new JSONObject();
-        GraphDatabaseService db = cluster.getMemberWithAnyRole(DEFAULT_DATABASE_NAME, Role.LEADER).database(DEFAULT_DATABASE_NAME);
-        GraphWriter writer = new GraphWriter(json, db);
+        GraphDatabaseService graphDb = cluster.getMemberWithAnyRole(DEFAULT_DATABASE_NAME, Role.LEADER).database(DEFAULT_DATABASE_NAME);
+        GraphWriter writer = new GraphWriter(json, graphDb);
     }
+
+    // BEGIN - Federos-specific tests
+
+    @Test
+    void federosQuery1Test() throws Exception {
+
+        String query = "WITH timestamp() AS tm\n" +
+                "        MERGE (v1:Device {Name: 'usfix-rtr1.federos.com', ZoneID: 1})\n" +
+                "ON CREATE SET v1 += {DNSName: \"usfix-rtr1.federos.com\", DeviceID: 1, TimestampModified: tm, UUID: randomUUID()}\n" +
+                "ON MATCH SET v1 += {DNSName: \"usfix-rtr1.federos.com\", DeviceID: 1, TimestampModified: tm}\n" +
+                "        MERGE (v2:Interface {Name: 'usfix-rtr1.federos.com:GigabitEthernet0/0', DeviceName: 'usfix-rtr1.federos.com', ZoneID: 1})\n" +
+                "ON CREATE SET v2 += {CustomName: \"GigabitEthernet0/0\", IPAddress: \"192.0.2.1\", UUID: randomUUID()}\n" +
+                "ON MATCH SET v2 += {CustomName: \"GigabitEthernet0/0\", IPAddress: \"192.0.2.1\"}\n" +
+                "        MERGE (v1)-[e:HasInterface]->(v2)\n" +
+                "ON CREATE SET e += {TimestampModified: tm, UUID: randomUUID()}\n" +
+                "ON MATCH SET e += {TimestampModified: tm};";
+
+        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx((db, tx) ->
+        {
+            tx.execute(query);
+            tx.commit();
+
+        });
+
+    }
+
+
+    @Test
+    void federosQuery2Test() throws Exception {
+
+        String query = "WITH timestamp() AS tm\n" +
+                "        MERGE (v1:Device {Name: 'usfix-rtr2.federos.com', ZoneID: 1})\n" +
+                "ON CREATE SET v1 += {DNSName: \"usfix-rtr2.federos.com\", DeviceID: 1, TimestampModified: tm, UUID: randomUUID()}\n" +
+                "ON MATCH SET v1 += {DNSName: \"usfix-rtr2.federos.com\", DeviceID: 1, TimestampModified: tm}\n" +
+                "        MERGE (v2:Interface {Name: 'usfix-rtr2.federos.com:GigabitEthernet0/0', DeviceName: 'usfix-rtr2.federos.com', ZoneID: 1})\n" +
+                "ON CREATE SET v2 += {CustomName: \"GigabitEthernet0/0\", IPAddress: \"192.0.2.2\", UUID: randomUUID()}\n" +
+                "ON MATCH SET v2 += {CustomName: \"GigabitEthernet0/0\", IPAddress: \"192.0.2.2\"}\n" +
+                "        MERGE (v1)-[e:HasInterface]->(v2)\n" +
+                "ON CREATE SET e += {TimestampModified: tm, UUID: randomUUID()}\n" +
+                "ON MATCH SET e += {TimestampModified: tm};";
+
+        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx((db, tx) ->
+        {
+            tx.execute(query);
+            tx.commit();
+
+        });
+
+    }
+
+    @Test
+    void federosQuery3Test() throws Exception {
+
+        String query = "WITH timestamp() AS tm\n" +
+                "        MERGE (v1:Interface {Name: 'usfix-rtr1.federos.com:GigabitEthernet0/0', DeviceName: 'usfix-rtr1.federos.com', ZoneID: 1})\n" +
+                "ON CREATE SET v1 += {CustomName: \"GigabitEthernet0/0\", IPAddress: \"192.0.2.1\", UUID: randomUUID()}\n" +
+                "ON MATCH SET v1 += {CustomName: \"GigabitEthernet0/0\", IPAddress: \"192.0.2.1\"}\n" +
+                "        MERGE (v2:Interface {Name: 'usfix-rtr2.federos.com:GigabitEthernet0/0', DeviceName: 'usfix-rtr2.federos.com', ZoneID: 1})\n" +
+                "ON CREATE SET v2 += {CustomName: \"GigabitEthernet0/0\", IPAddress: \"192.0.2.2\", UUID: randomUUID()}\n" +
+                "ON MATCH SET v2 += {CustomName: \"GigabitEthernet0/0\", IPAddress: \"192.0.2.2\"}\n" +
+                "        MERGE (v1)-[e:ConnectsInterface]-(v2)\n" +
+                "ON CREATE SET e += {TimestampModified: tm, UUID: randomUUID()}\n" +
+                "ON MATCH SET e += {TimestampModified: tm};";
+
+        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx((db, tx) ->
+        {
+            tx.execute(query);
+            tx.commit();
+
+        });
+
+    }
+
+    @Test
+    void federosQuery4Test() throws Exception {
+
+        String query = " WITH timestamp() AS tm\n" +
+                "        MERGE (v1:Device {Name: 'usfix-rtr1.federos.com', ZoneID: 1})\n" +
+                "ON CREATE SET v1 += {Name: \"usfix-rtr1.federos.com\", DNSName: \"usfix-rtr1.federos.com\", DeviceID: 1, TimestampModified: tm, UUID: randomUUID()}\n" +
+                "ON MATCH SET v1 += {Name: \"usfix-rtr1.federos.com\", DNSName: \"usfix-rtr1.federos.com\", DeviceID: 1, TimestampModified: tm}\n" +
+                "        MERGE (v2:Device {Name: 'usfix-rtr2.federos.com', ZoneID: 1})\n" +
+                "ON CREATE SET v2 += {Name: \"usfix-rtr2.federos.com\", DNSName: \"usfix-rtr2.federos.com\", DeviceID: 2, TimestampModified: tm, UUID: randomUUID()}\n" +
+                "ON MATCH SET v2 += {Name: \"usfix-rtr2.federos.com\", DNSName: \"usfix-rtr2.federos.com\", DeviceID: 2, TimestampModified: tm}\n" +
+                "        MERGE (v1)-[e:ConnectsNeighbor]-(v2)\n" +
+                "ON CREATE SET e += {TimestampModified: tm, UUID: randomUUID()}\n" +
+                "ON MATCH SET e += {TimestampModified: tm};";
+
+        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx((db, tx) ->
+        {
+            tx.execute(query);
+            tx.commit();
+
+        });
+
+    }
+
+
 }
