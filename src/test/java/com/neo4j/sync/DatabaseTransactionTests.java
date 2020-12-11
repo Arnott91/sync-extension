@@ -153,6 +153,13 @@ public class DatabaseTransactionTests {
         {
             tx.execute("CREATE (t:Test {uuid:'123XYZ'})-[:CONNECTED_TO]->(t2:Test {uuid:'XYZ123'})");
             tx.commit();
+
+
+        });
+
+        cluster.coreTx((db, tx) ->
+        {
+
             tx.execute("MATCH (t:Test {uuid:'123XYZ'})-[r:CONNECTED_TO]->(t2:Test {uuid:'XYZ123'}) DELETE r");
             tx.commit();
 

@@ -30,9 +30,38 @@ public class GraphWriter {
 
     }
 
-    public void executeCRUDOperation(JSONObject event) {
+    public void executeCRUDOperation(List<Map<String, JSONObject>> events) throws JSONException {
 
         // logic to loop through all events in the event array and determine change type and then call delegate.
+
+        for (Map<String, JSONObject> entry : events){
+            for (Map.Entry<String, JSONObject> e : entry.entrySet()) {
+                String k = e.getKey();
+                JSONObject v = e.getValue();
+                switch (k) {
+                    case "addNode":
+                        this.delegateCRUDOperation(v,ChangeType.ADD_NODE);
+                    case "deleteNode":
+                        this.delegateCRUDOperation(v,ChangeType.DELETE_NODE);
+                    case "addProperty":
+                        this.delegateCRUDOperation(v,ChangeType.ADD_PROPERTY);
+                    case "removeProperty":
+                        this.delegateCRUDOperation(v,ChangeType.REMOVE_PROPERTY);
+                    case "addRelation":
+                        this.delegateCRUDOperation(v,ChangeType.ADD_RELATION);
+                    case "deleteRelation":
+                        this.delegateCRUDOperation(v,ChangeType.DELETE_RELATION);
+                    case "addRelationProperty":
+                        this.delegateCRUDOperation(v,ChangeType.ADD_RELATION_PROPERTY);
+                    case "removeRelationProperty":
+                        this.delegateCRUDOperation(v,ChangeType.REMOVE_RELATION_PROPERTY);
+                    default:
+                }
+
+            }
+
+        }
+
     }
 
     private void delegateCRUDOperation(JSONObject event, ChangeType changeType) throws JSONException {
