@@ -10,10 +10,8 @@ import org.neo4j.graphdb.Node;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.graphdb.*;
-import scala.util.parsing.json.JSON;
 
 public class GraphWriter {
 
@@ -30,11 +28,11 @@ public class GraphWriter {
 
     }
 
-    public void executeCRUDOperation(List<Map<String, JSONObject>> events) throws JSONException {
+    public void executeCRUDOperation() throws JSONException {
 
         // logic to loop through all events in the event array and determine change type and then call delegate.
 
-        for (Map<String, JSONObject> entry : events){
+        for (Map<String, JSONObject> entry : transactionEvents){
             for (Map.Entry<String, JSONObject> e : entry.entrySet()) {
                 String k = e.getKey();
                 JSONObject v = e.getValue();

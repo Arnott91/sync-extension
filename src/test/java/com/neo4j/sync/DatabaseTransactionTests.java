@@ -5,6 +5,7 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.sync.engine.GraphWriter;
+import com.neo4j.sync.engine.TransactionDataParser;
 import com.neo4j.sync.listener.AuditTransactionEventListenerAdapter;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
@@ -16,12 +17,18 @@ import org.junit.jupiter.api.TestInstance;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.test.extension.Inject;
 
+import java.util.List;
+import java.util.Map;
+
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
 @ClusterExtension
 public class DatabaseTransactionTests {
     @Inject
+
+
+
     private ClusterFactory clusterFactory;
 
     private Cluster cluster;
@@ -258,17 +265,20 @@ public class DatabaseTransactionTests {
     }
 
     @Test
-    void graphWriterInitTest() throws Exception {
+    void graphWriterAddNodeTest() throws Exception {
         // Do work here
+        String ADD_NODE = "{\"transactionEvents\":[{\"changeType\":\"AddNode\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":null,\"targetNodeLabels\":null,\"targetPrimaryKey\":null,\"properties\":null,\"allProperties\":{\"uuid\":\"123XYZ\"},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";
         AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
 
 
-        JSONObject json = new JSONObject();
+        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
         GraphDatabaseService graphDb = cluster.getMemberWithAnyRole(DEFAULT_DATABASE_NAME, Role.LEADER).database(DEFAULT_DATABASE_NAME);
-        GraphWriter writer = new GraphWriter(json, graphDb);
+        GraphWriter writer = new GraphWriter(graphTxTranslation, graphDb);
+        writer.executeCRUDOperation();
+
     }
 
     // BEGIN - Federos-specific tests
