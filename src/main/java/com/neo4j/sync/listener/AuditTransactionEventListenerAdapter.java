@@ -27,7 +27,7 @@ import java.util.function.Supplier;
  *
  */
 
-public class FederosTransactionEventListenerAdapter implements TransactionEventListener<Node> {
+public class AuditTransactionEventListenerAdapter implements TransactionEventListener<Node> {
 
     private String beforeCommitTxId;
     private final String TX_RECORD_LABEL = "com.neo4j.sync.engine.TransactionRecord";

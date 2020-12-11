@@ -1,6 +1,8 @@
 package com.neo4j.sync.engine;
 
+import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -8,21 +10,11 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public class ReplicationEngine {
-    private static ReplicationEngine theEngine;
     private final Driver driver;
-
     private ScheduledExecutorService execService = Executors.newScheduledThreadPool(1);
     private ScheduledFuture<?> scheduledFuture;
 
-    public static synchronized ReplicationEngine replicationEngine(Driver driver) {
-        if (theEngine == null) {
-            theEngine = new ReplicationEngine(driver);
-        }
-
-        return theEngine;
-    }
-
-    private ReplicationEngine(Driver driver) {
+    public ReplicationEngine(Driver driver ) {
         this.driver = driver;
     }
 

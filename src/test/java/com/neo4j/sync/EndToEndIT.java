@@ -10,12 +10,8 @@ import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.neo4j.driver.Record;
-import org.neo4j.driver.*;
 import org.neo4j.test.extension.Inject;
 
-import java.net.URI;
-import java.util.Map;
 import java.util.UUID;
 
 import static java.lang.String.format;
@@ -23,7 +19,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
 @ClusterExtension
-public class PullFromRemoteClusterIT {
+public class EndToEndIT {
 
     public static final String INTEGRATION_DB_NAME = format("Integrationdb-%s", UUID.randomUUID());
 
@@ -41,6 +37,7 @@ public class PullFromRemoteClusterIT {
 
     @BeforeEach
     void setup() throws Exception {
+
         sourceCluster = clusterFactory.createCluster(clusterConfig);
         sourceCluster.start();
 
@@ -49,6 +46,8 @@ public class PullFromRemoteClusterIT {
 
         for (CoreClusterMember coreMember : sourceCluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, new AuditTransactionEventListenerAdapter());
+            // dependencies.procedures().registerProcedure
+
         }
 
         // Don't need the listener on the sink cluster for this test
@@ -67,24 +66,18 @@ public class PullFromRemoteClusterIT {
     }
 
     @Test
-    public void shouldPullFromRemoteDB() throws Exception {
+    public void shouldPullFromRemoteDatabaseAndStoreInLocalDatabase() throws Exception {
 
-        try (Driver driver = GraphDatabase.driver(new URI("neo4j://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
-
-            Session session = driver.session(SessionConfig.builder().withDatabase(INTEGRATION_DB_NAME).build());
-            Result result = session.run(("MATCH (n)-[r]->() RETURN n, r"));
-
-            while (result.hasNext()) {
-                Record record = result.next();
-                Map<String, Object> records = record.asMap();
-                for (String key : records.keySet()) {
-                    System.out.println(key + " --> " + records.get(key));
-
-                    for (String recordKey : records.keySet()) {
-                        System.out.println(recordKey + " --> " + records.get(recordKey));
-                    }
-                }
-            }
-        }
+//        String sourceBoltAddress = "neo4j://" + sourceCluster.awaitLeader().boltAdvertisedAddress();
+//        System.out.println("sourceBoltAddress = " + sourceBoltAddress);
+//
+//
+//        sinkCluster.coreTx(INTEGRATION_DB_NAME, (db, tx) ->
+//        {
+//            tx.execute(format("CALL startReplication('%s', '%s', '%s')",
+//                    sourceBoltAddress, "neo4j", "password"));
+//
+//            tx.commit();
+//        });
     }
 }
