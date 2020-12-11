@@ -19,6 +19,7 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.junit.jupiter.causal_cluster.CausalCluster;
+import org.neo4j.junit.jupiter.causal_cluster.ClusterFactory;
 import org.neo4j.junit.jupiter.causal_cluster.CoreModifier;
 import org.neo4j.junit.jupiter.causal_cluster.NeedsCausalCluster;
 import org.neo4j.junit.jupiter.causal_cluster.Neo4jCluster;
@@ -28,7 +29,7 @@ import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
-@NeedsCausalCluster( neo4jVersion = "4.2" )
+@NeedsCausalCluster( neo4jVersion = "4.2", createMultipleClusters = true )
 public class EndToEndContainerIT
 {
     private static final String myPlugin = "myPlugin.jar";
@@ -38,18 +39,39 @@ public class EndToEndContainerIT
     public static final String INTEGRATION_DB_NAME = format( "Integrationdb-%s", UUID.randomUUID() );
 
     @CausalCluster
-    private static Neo4jCluster cluster;
+    private static Neo4jCluster clusterOne;
+
+    @CausalCluster
+    private static Neo4jCluster clusterTwo;
 
     @CoreModifier
     private static Neo4jContainer<?> configure( Neo4jContainer<?> input ) throws IOException
     {
+        // This relies on internal implementation details but we are in advanced territory here so go figure
+        int serverIndex = input.getNetworkAliases().stream()
+                               .filter( s -> s.startsWith( "neo4j" ) )
+                               .map( s -> s.replace( "neo4j", "" ) )
+                               .map( s -> Integer.parseInt( s ) - 1 )
+                               .findFirst().get();
+        int clusterIndex = Math.floorDiv( serverIndex, ClusterFactory.MAXIMUM_NUMBER_OF_SERVERS_ALLOWED );
+
         var pluginsDir = Files.createTempDir();
         var myPluginJar = pluginsDir.toPath().resolve( myPlugin );
 
         new JarBuilder().createJarFor( myPluginJar, StartAndStopReplicationProcedures.class, ReplicationEngine.class );
 
-        return input.withNeo4jConfig( "dbms.security.procedures.unrestricted", "*" )
-                    .withCopyFileToContainer( MountableFile.forHostPath( myPluginJar ), "/plugins/myPlugin.jar" );
+        input = input.withNeo4jConfig( "dbms.security.procedures.unrestricted", "*" )
+                     .withCopyFileToContainer( MountableFile.forHostPath( myPluginJar ), "/plugins/myPlugin.jar" );
+
+        switch ( clusterIndex )
+        {
+        case 0:
+            return input.withNeo4jConfig( "my.cluster_one.config", "foo" );
+        case 1:
+            return input.withNeo4jConfig( "my.cluster_two.config", "bar" );
+        default:
+            throw new IllegalStateException( "Unexpected cluster index: " + clusterIndex );
+        }
     }
 
     @BeforeEach
@@ -62,7 +84,17 @@ public class EndToEndContainerIT
     public void shouldPullFromRemoteDatabaseAndStoreInLocalDatabase() throws Exception
     {
 
-        try ( Driver coreDriver = GraphDatabase.driver( cluster.getURI(), authToken ) )
+        try ( Driver coreDriver = GraphDatabase.driver( clusterOne.getURI(), authToken ) )
+        {
+            Session session = coreDriver.session();
+            Result res = session.run( "CALL dbms.procedures() YIELD name, signature RETURN name, signature" );
+
+            // Then the procedure from the plugin is listed
+            assertTrue( res.stream().anyMatch( x -> x.get( "name" ).asString().contains( "startReplication" ) ),
+                        "Missing procedure provided by our plugin" );
+        }
+
+        try ( Driver coreDriver = GraphDatabase.driver( clusterTwo.getURI(), authToken ) )
         {
             Session session = coreDriver.session();
             Result res = session.run( "CALL dbms.procedures() YIELD name, signature RETURN name, signature" );
