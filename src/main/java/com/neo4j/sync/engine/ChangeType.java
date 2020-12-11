@@ -1,5 +1,5 @@
 package com.neo4j.sync.engine;
 
 public enum ChangeType {
-    AddNode, DeleteNode, AddRelation, DeleteRelation
+    ADD_NODE,DELETE_NODE,ADD_RELATION,DELETE_RELATION,ADD_PROPERTY,REMOVE_PROPERTY
 }

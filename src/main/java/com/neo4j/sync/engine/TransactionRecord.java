@@ -15,7 +15,7 @@ public class TransactionRecord {
 
         this.timestampCreated = timestampCreated;
         this.status = status;
-        this.transactionData = transactionData;
+        this.transactionData = this.wrapTransactionMessage(transactionData);
         this.transactionUUID = transactionUUID;
     }
 
@@ -42,6 +42,12 @@ public class TransactionRecord {
     public String getTransactionUUID() {
         return transactionUUID;
     }
+
+    private  String wrapTransactionMessage(String transactionData) {
+        // remove the surrounding brackets of each transaction message.
+        return "{\"transactionEvents\":" + transactionData + "}";
+
+    };
 
 
 }

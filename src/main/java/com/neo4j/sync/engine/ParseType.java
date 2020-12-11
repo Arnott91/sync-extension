@@ -1,5 +1,6 @@
 package com.neo4j.sync.engine;
 
 public enum ParseType {
-    PROPERTIES, PRIMARY_KEY,RELATIONSHIPS
+    PRIMARY_KEY, NODE_PROPERTIES, REL_PROPERTIES
+
 }
