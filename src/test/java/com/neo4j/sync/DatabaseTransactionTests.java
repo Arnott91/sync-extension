@@ -267,9 +267,9 @@ public class DatabaseTransactionTests {
     void changeNodePropertyTest() throws Exception {
         // Do work here
         AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
-        for (CoreClusterMember coreMember : cluster.coreMembers()) {
-            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
-        }
+//        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+//            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+//        }
 
         cluster.coreTx((db, tx) ->
         {

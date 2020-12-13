@@ -44,6 +44,9 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
     public Node beforeCommit(TransactionData data, Transaction transaction, GraphDatabaseService databaseService)
             throws Exception {
 
+
+        System.out.println(" --> HERE!!!");
+
         // ge a handle to the transaction recorder.  This will grab information from the Transaction Data object
         // and populate a transaction record that we can use to both write a TransactionRecord node to the
         // local database and also to log the transaction in any of the logs.
