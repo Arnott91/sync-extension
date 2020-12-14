@@ -35,6 +35,10 @@ public class EndToEndContainerIT {
 
     @CoreModifier
     private static Neo4jContainer<?> configure(Neo4jContainer<?> input) throws IOException {
+
+        // dump the current (test time) classpath into the container
+        input = DeveloperWorkflow.configureNeo4jWithCurrentClasspath( input );
+
         // This relies on internal implementation details but we are in advanced territory here so go figure
         int serverIndex = input.getNetworkAliases().stream()
                 .filter(s -> s.startsWith("neo4j"))
