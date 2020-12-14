@@ -16,7 +16,6 @@ import java.io.IOException;
 import java.util.UUID;
 
 import static java.lang.String.format;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @NeedsCausalCluster(neo4jVersion = "4.2", createMultipleClusters = true)
@@ -51,7 +50,8 @@ public class EndToEndContainerIT {
         var pluginsDir = Files.createTempDir();
         var myPluginJar = pluginsDir.toPath().resolve(myPlugin);
 
-        new JarBuilder().createJarFor(myPluginJar, StartAndStopReplicationProcedures.class, ReplicationEngine.class);
+        new JarBuilder().createJarFor(myPluginJar, StartAndStopReplicationProcedures.class, ReplicationEngine.class,
+                StartAndStopReplicationProcedures.Output.class);
 
         input = input.withNeo4jConfig("dbms.security.procedures.unrestricted", "*")
                 .withCopyFileToContainer(MountableFile.forHostPath(myPluginJar), "/plugins/myPlugin.jar");
@@ -66,42 +66,38 @@ public class EndToEndContainerIT {
         }
     }
 
-    @BeforeEach
-    void setup() throws Exception {
-
-    }
-
     @Test
-    public void shouldPullFromRemoteDatabaseAndStoreInLocalDatabase() throws Exception {
+    public void shouldPullFromRemoteDatabaseAndStoreInLocalDatabase() {
+
+        System.out.println("clusterOne.getURI() = " + clusterOne.getURI());
+        System.out.println("clusterTwo.getURI() = " + clusterTwo.getURI());
 
         try (Driver coreDriver = GraphDatabase.driver(clusterOne.getURI(), authToken)) {
             Session session = coreDriver.session();
-            Result res = session.run("CALL dbms.procedures() YIELD name, signature RETURN name, signature");
+            session.run(format("CALL startReplication('%s', '%s', '%s')", clusterTwo.getURI(), "neo4j", "password"));
 
-            // Then the procedure from the plugin is listed
-            assertTrue(res.stream().anyMatch(x -> x.get("name").asString().contains("startReplication")),
-                    "Missing procedure provided by our plugin");
+            Result res = session.run("CALL replicationStatus");
+            res.stream().forEach(x -> System.out.println(x));
         }
 
-        try (Driver coreDriver = GraphDatabase.driver(clusterTwo.getURI(), authToken)) {
-            Session session = coreDriver.session();
-            Result res = session.run("CALL dbms.procedures() YIELD name, signature RETURN name, signature");
 
-            // Then the procedure from the plugin is listed
-            assertTrue(res.stream().anyMatch(x -> x.get("name").asString().contains("startReplication")),
-                    "Missing procedure provided by our plugin");
-        }
+//        try (Driver coreDriver = GraphDatabase.driver(clusterOne.getURI(), authToken)) {
+//            Session session = coreDriver.session();
+//            Result res = session.run("CALL dbms.procedures() YIELD name, signature RETURN name, signature");
+//
+//            // Then the procedure from the plugin is listed
+//            assertTrue(res.stream().anyMatch(x -> x.get("name").asString().contains("startReplication")),
+//                    "Missing procedure provided by our plugin");
+//        }
 
-//        String sourceBoltAddress = "neo4j://" + sourceCluster.awaitLeader().boltAdvertisedAddress();
-//        System.out.println("sourceBoltAddress = " + sourceBoltAddress);
+
+//        try (Driver coreDriver = GraphDatabase.driver(clusterTwo.getURI(), authToken)) {
+//            Session session = coreDriver.session();
+//            Result res = session.run("CALL dbms.procedures() YIELD name, signature RETURN name, signature");
 //
-//
-//        sinkCluster.coreTx(INTEGRATION_DB_NAME, (db, tx) ->
-//        {
-//            tx.execute(format("CALL startReplication('%s', '%s', '%s')",
-//                    sourceBoltAddress, "neo4j", "password"));
-//
-//            tx.commit();
-//        });
+//            // Then the procedure from the plugin is listed
+//            assertTrue(res.stream().anyMatch(x -> x.get("name").asString().contains("startReplication")),
+//                    "Missing procedure provided by our plugin");
+//        }
     }
 }
