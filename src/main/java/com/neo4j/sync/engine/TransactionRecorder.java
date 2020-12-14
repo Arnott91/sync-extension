@@ -46,8 +46,17 @@ public class TransactionRecorder {
 
                     return null;
                 } else if (l.name().equalsIgnoreCase("com.neo4j.sync.engine.TransactionRecord")) {
+                    // didn't collapse all possibilities into an OR statement because I'm not
+                    // sure whether we want to do anything else here depending on the label type.
+                    // will probably replace with a switch.
+                    return null;
+                } else if (l.name().equalsIgnoreCase("com.neo4j.sync.engine.LocalTx")){
+
+                    // DITTO
+
                     return null;
                 }
+
             }
         }
 

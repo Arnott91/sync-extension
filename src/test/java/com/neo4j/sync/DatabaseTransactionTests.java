@@ -4,6 +4,7 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.configuration.CausalClusteringSettings;
+import com.neo4j.fabric.shaded.driver.GraphDatabase;
 import com.neo4j.sync.engine.GraphWriter;
 import com.neo4j.sync.engine.TransactionDataParser;
 import com.neo4j.sync.listener.AuditTransactionEventListenerAdapter;
@@ -361,9 +362,9 @@ public class DatabaseTransactionTests {
         }
 
 
-        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
-        GraphDatabaseService graphDb = cluster.getMemberWithAnyRole(DEFAULT_DATABASE_NAME, Role.LEADER).database(DEFAULT_DATABASE_NAME);
-        GraphWriter writer = new GraphWriter(graphTxTranslation, graphDb);
+        var graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
+        GraphDatabase graphDb = new GraphDatabase();
+        var writer = new GraphWriter(graphTxTranslation, (GraphDatabaseService) graphDb);
         writer.executeCRUDOperation();
 
     }

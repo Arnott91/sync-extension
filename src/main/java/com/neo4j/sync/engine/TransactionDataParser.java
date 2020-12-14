@@ -1,9 +1,10 @@
 package com.neo4j.sync.engine;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import scala.util.parsing.json.JSON;
+
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,7 +13,9 @@ import java.util.Map;
 
 public class TransactionDataParser {
 
-
+    private static final String LOCAL_TRANSACTION_LABEL = "com.neo4j.sync.engine.LocalTx";
+    private static final String ADD_NODE_LABEL_KEY = "nodeLabels";
+    private static final String TARGET_NODE_LABEL_KEY = "targetNodeLabels";
 
 
     public static JSONObject TranslateTransactionData(String transactionData) throws JSONException {
@@ -21,7 +24,7 @@ public class TransactionDataParser {
 
         return new JSONObject(transactionData);
 
-    };
+    }
     
     public static List<Map<String, JSONObject>> getTransactionEvents(JSONObject entireTransaction) throws JSONException {
 
@@ -43,7 +46,7 @@ public class TransactionDataParser {
              JSONObject event = (JSONObject) events.get(i);
            changeTypeEventMap.put(event.get("changeType").toString(), event);
            eventsList.add(changeTypeEventMap);
-        };
+        }
 
 
         return eventsList;
@@ -93,17 +96,25 @@ public class TransactionDataParser {
     public static String[] getNodeLabels(JSONObject nodeEvent) throws JSONException {
 
         // add LOCAL_TX label
-        String [] transactionLabels =  nodeEvent.get("labels").toString().split(",");
+        String [] transactionLabels =  nodeEvent.get(ADD_NODE_LABEL_KEY).toString().split(",");
         String [] txLabelsPlusLocal = new String[transactionLabels.length + 1];
-        for (int i = 0; i < transactionLabels.length; i++){
-            txLabelsPlusLocal[i] = transactionLabels[i];
-        }
+        System.arraycopy(transactionLabels, 0, txLabelsPlusLocal, 0, transactionLabels.length);
 
-        txLabelsPlusLocal[transactionLabels.length] = "LOCAL_TX";
+        txLabelsPlusLocal[transactionLabels.length] = LOCAL_TRANSACTION_LABEL;
 
         return txLabelsPlusLocal;
 
     }
+
+    public static String[] getTargetNodeLabels(JSONObject nodeEvent) throws JSONException {
+
+        // add LOCAL_TX label
+        String [] transactionLabels =  nodeEvent.get(TARGET_NODE_LABEL_KEY).toString().split(",");
+        ArrayUtils.add(transactionLabels, LOCAL_TRANSACTION_LABEL);
+        return transactionLabels;
+
+    }
+
 
     public static String[] getNodeLabels(JSONObject nodeEvent, NodeDirection direction) throws JSONException {
 

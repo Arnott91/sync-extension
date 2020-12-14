@@ -25,6 +25,8 @@ public class GraphWriter {
         // split the transactionEvents JSON into a list of separate events
 
         this.transactionEvents = TransactionDataParser.getTransactionEvents(graphTransaction);
+        this.graphDb = (GraphDatabaseAPI) graphDb;
+
 
     }
 
@@ -37,23 +39,30 @@ public class GraphWriter {
                 String k = e.getKey();
                 JSONObject v = e.getValue();
                 switch (k) {
-                    case "addNode":
+                    case "AddNode":
                         this.delegateCRUDOperation(v,ChangeType.ADD_NODE);
-                    case "deleteNode":
+                        break;
+                    case "DeleteNode":
                         this.delegateCRUDOperation(v,ChangeType.DELETE_NODE);
-                    case "addProperty":
+                        break;
+                    case "AddProperty":
                         this.delegateCRUDOperation(v,ChangeType.ADD_PROPERTY);
+                        break;
                     case "NodePropertyChange":
                         this.delegateCRUDOperation(v,ChangeType.NODE_PROPERTY_CHANGE);
-                    case "addRelation":
+                        break;
+                    case "AddRelation":
                         this.delegateCRUDOperation(v,ChangeType.ADD_RELATION);
-                    case "deleteRelation":
+                        break;
+                    case "DeleteRelation":
                         this.delegateCRUDOperation(v,ChangeType.DELETE_RELATION);
-                    case "addRelationProperty":
+                        break;
+                    case "AddRelationProperty":
                         this.delegateCRUDOperation(v,ChangeType.ADD_RELATION_PROPERTY);
-                    case "removeRelationProperty":
+                        break;
+                    case "RemoveRelationProperty":
                         this.delegateCRUDOperation(v,ChangeType.RELATION_PROPERTY_CHANGE);
-                    default:
+
                 }
 
             }
@@ -66,12 +75,19 @@ public class GraphWriter {
 
         switch (changeType) {
             case ADD_NODE: this.addNode(event);
+            break;
             case ADD_PROPERTY: this.addProperties(event);
+            break;
             case NODE_PROPERTY_CHANGE: this.changeNodeProperties(event);
+            break;
             case DELETE_NODE: this.deleteNodes(event);
+            break;
             case DELETE_RELATION: this.deleteRelation(event);
+            break;
             case ADD_RELATION: this.addRelation(event);
+            break;
             case ADD_RELATION_PROPERTY: this.addRelationProperties(event);
+            break;
             case RELATION_PROPERTY_CHANGE: this.changeRelationProperties(event);
         }
 
@@ -109,7 +125,7 @@ public class GraphWriter {
 
         } finally
         {
-            log.info("proc write complete");
+           System.out.println("proc write complete");
 
 
         }
@@ -312,7 +328,8 @@ public class GraphWriter {
 
         } finally
         {
-            log.info("proc write complete");
+            //log.info("proc write complete");
+            System.out.println("add properties completed");
 
 
         }
@@ -344,7 +361,8 @@ public class GraphWriter {
 
         } finally
         {
-            log.info("proc write complete");
+            //log.info("proc write complete");
+            System.out.println("add node succeeded");
 
 
         }
