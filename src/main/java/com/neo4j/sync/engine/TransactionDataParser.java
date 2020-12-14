@@ -92,7 +92,16 @@ public class TransactionDataParser {
 
     public static String[] getNodeLabels(JSONObject nodeEvent) throws JSONException {
 
-        return  nodeEvent.get("labels").toString().split(",");
+        // add LOCAL_TX label
+        String [] transactionLabels =  nodeEvent.get("labels").toString().split(",");
+        String [] txLabelsPlusLocal = new String[transactionLabels.length + 1];
+        for (int i = 0; i < transactionLabels.length; i++){
+            txLabelsPlusLocal[i] = transactionLabels[i];
+        }
+
+        txLabelsPlusLocal[transactionLabels.length] = "LOCAL_TX";
+
+        return txLabelsPlusLocal;
 
     }
 

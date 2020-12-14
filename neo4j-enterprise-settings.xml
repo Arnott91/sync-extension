@@ -30,7 +30,7 @@
                     <name>neo4j-enterprise</name>
                     <url>http://m2.neo4j.com/enterprise</url>
                 </repository>
-            </repositories>
+             </repositories>
             <pluginRepositories>
                 <pluginRepository>
                     <snapshots>
