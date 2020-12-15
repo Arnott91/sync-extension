@@ -295,6 +295,7 @@ public class GraphWriter {
 
         } catch (Exception e) {
             // log exception
+            // need to pass a log into the constructor.
             //this.logException(e, databaseService);
             System.out.println(e.getMessage());
 
