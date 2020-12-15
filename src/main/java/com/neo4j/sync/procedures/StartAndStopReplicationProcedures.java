@@ -40,10 +40,10 @@ public class StartAndStopReplicationProcedures {
     }
 
     public static class Output {
-        public String out;
+        public String status;
 
         public Output(ReplicationEngine.Status status) {
-            out = status.toString().toLowerCase();
+            this.status = status.toString().toLowerCase();
         }
     }
 }

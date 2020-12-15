@@ -1,6 +1,7 @@
 package com.neo4j.sync.engine;
 
 import org.neo4j.driver.Driver;
+import org.neo4j.driver.Result;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -22,7 +23,8 @@ public class ReplicationEngine {
     public synchronized void start() {
         scheduledFuture = execService.scheduleAtFixedRate(() -> {
             // TODO: change this for real cypher that pulls from the remote database
-            driver.session().run("MATCH (n) RETURN (n)");
+            Result run = driver.session().run("MATCH (n) RETURN (n)");
+            run.forEachRemaining(System.out::println);
 
         }, 0, 60L, TimeUnit.SECONDS);
         status = RUNNING;

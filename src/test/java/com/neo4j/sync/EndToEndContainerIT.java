@@ -13,7 +13,6 @@ import org.testcontainers.shaded.com.google.common.io.Files;
 import org.testcontainers.utility.MountableFile;
 
 import java.io.IOException;
-import java.util.UUID;
 
 import static java.lang.String.format;
 
@@ -24,19 +23,20 @@ public class EndToEndContainerIT {
 
     private static final AuthToken authToken = AuthTokens.basic("neo4j", "password");
 
-    public static final String INTEGRATION_DB_NAME = format("Integrationdb-%s", UUID.randomUUID());
+    public static final String INTEGRATION_DB_NAME = "Integrationdb";
 
     @CausalCluster
     private static Neo4jCluster clusterOne;
 
     @CausalCluster
     private static Neo4jCluster clusterTwo;
+    private SessionConfig sessionConfig;
 
     @CoreModifier
     private static Neo4jContainer<?> configure(Neo4jContainer<?> input) throws IOException {
 
         // dump the current (test time) classpath into the container
-        input = DeveloperWorkflow.configureNeo4jWithCurrentClasspath( input );
+        input = DeveloperWorkflow.configureNeo4jWithCurrentClasspath(input);
 
         // This relies on internal implementation details but we are in advanced territory here so go figure
         int serverIndex = input.getNetworkAliases().stream()
@@ -66,29 +66,48 @@ public class EndToEndContainerIT {
         }
     }
 
+    @BeforeEach
+    public void setupTheIntegrationDB() {
+
+        sessionConfig = SessionConfig.builder().withDatabase(INTEGRATION_DB_NAME).build();
+
+        // TODO: need to figure out how to get the dockerised address
+        try (Driver coreDriver = GraphDatabase.driver(clusterOne.getURI(), authToken)) {
+            Session session = coreDriver.session(sessionConfig);
+            session.run("MATCH (n) DETACH DELETE (n)");
+            Result result = session.run("CREATE (:Person {name:'Karl'})-[:FOLLOWS]->(:Person {name:'Rosa'})");
+            result.stream().forEach(System.out::println);
+        }
+    }
+
     @Test
     public void shouldPullFromRemoteDatabaseAndStoreInLocalDatabase() {
 
-        System.out.println("clusterOne.getURI() = " + clusterOne.getURI());
-        System.out.println("clusterTwo.getURI() = " + clusterTwo.getURI());
 
         try (Driver coreDriver = GraphDatabase.driver(clusterOne.getURI(), authToken)) {
-            Session session = coreDriver.session();
+            Session session = coreDriver.session(sessionConfig);
             session.run(format("CALL startReplication('%s', '%s', '%s')", clusterTwo.getURI(), "neo4j", "password"));
 
-            Result res = session.run("CALL replicationStatus");
-            res.stream().forEach(x -> System.out.println(x));
+//            Result res = session.run("CALL replicationStatus");
+//            res.stream().forEach(System.out::println);
+//
+//            session.run("CALL stopReplication()");
+//                res = session.run("CALL replicationStatus");
+//            res.stream().forEach(System.out::println);
         }
 
 
-//        try (Driver coreDriver = GraphDatabase.driver(clusterOne.getURI(), authToken)) {
-//            Session session = coreDriver.session();
-//            Result res = session.run("CALL dbms.procedures() YIELD name, signature RETURN name, signature");
+        try (Driver coreDriver = GraphDatabase.driver(clusterTwo.getURI(), authToken)) {
+            Session session = coreDriver.session(sessionConfig);
+            session.run(format("CALL startReplication('%s', '%s', '%s')", clusterOne.getURI(), "neo4j", "password"));
+
+//            Result res = session.run("CALL replicationStatus");
+//            res.stream().forEach(System.out::println);
 //
-//            // Then the procedure from the plugin is listed
-//            assertTrue(res.stream().anyMatch(x -> x.get("name").asString().contains("startReplication")),
-//                    "Missing procedure provided by our plugin");
-//        }
+//            session.run("CALL stopReplication()");
+//                res = session.run("CALL replicationStatus");
+//            res.stream().forEach(System.out::println);
+        }
 
 
 //        try (Driver coreDriver = GraphDatabase.driver(clusterTwo.getURI(), authToken)) {
