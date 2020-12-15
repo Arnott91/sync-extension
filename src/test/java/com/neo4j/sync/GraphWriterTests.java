@@ -3,35 +3,25 @@ package com.neo4j.sync;
 
 import com.neo4j.sync.engine.GraphWriter;
 import com.neo4j.sync.engine.TransactionDataParser;
-
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
+import org.neo4j.test.extension.ImpermanentDbmsExtension;
+import org.neo4j.test.extension.Inject;
+import static org.junit.jupiter.api.Assertions.*;
 import org.neo4j.graphdb.*;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
-import com.neo4j.sync.engine.GraphWriter;
-import com.neo4j.sync.engine.TransactionDataParser;
-
 import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.extension.ImpermanentDbmsExtension;
-import org.neo4j.test.extension.Inject;
-
-import org.codehaus.jettison.json.JSONObject;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 
 @TestInstance( TestInstance.Lifecycle.PER_METHOD )
@@ -47,6 +37,7 @@ public class GraphWriterTests {
     private final String REL_PROPERTY_CHANGE = "{\"transactionEvents\":[{\"changeType\":\"RelationPropertyChange\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":\"CONNECTED_TO\",\"targetNodeLabels\":[\"Test\"],\"targetPrimaryKey\":{\"uuid\":\"XYZ123\"},\"properties\":[{\"propertyName\":\"weight\",\"oldValue\":1,\"newValue\":2}],\"allProperties\":{\"weight\":2},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";
     private static final String LOCAL_lABEL = "com.neo4j.sync.engine.LocalTx";
     private static final String TEST_REL_TYPE = "CONNECTED_TO";
+    private static final String TEST_REL_TYPE2 = "LIKES";
 
 
     @Inject
@@ -59,6 +50,8 @@ public class GraphWriterTests {
     @Test
     void addNodeTest1() throws Exception
     {
+
+        // passed
         assertNotNull(graphDatabaseAPI);
         JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
         GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI);
@@ -75,6 +68,8 @@ public class GraphWriterTests {
     @Test
     void addNodeTest2() throws Exception
     {
+
+        // passed
         assertNotNull(graphDatabaseAPI);
         JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODES_AND_PROPERTIES);
         GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI);
@@ -91,6 +86,7 @@ public class GraphWriterTests {
     @Test
     void addNodesAndRelationshipTest1() throws Exception
     {
+        // passed
         assertNotNull(graphDatabaseAPI);
         JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODES_AND_RELATIONSHIP);
         GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI);
@@ -100,6 +96,7 @@ public class GraphWriterTests {
         assertNotNull(newNodes);
         newNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
         newNodes.forEach(node -> assertTrue(node.hasRelationship(RelationshipType.withName((TEST_REL_TYPE)))));
+
         tx.commit();
 
 
@@ -108,6 +105,8 @@ public class GraphWriterTests {
     @Test
     void addNodesAndRelationshipsTest1() throws Exception
     {
+
+        // failed
         assertNotNull(graphDatabaseAPI);
         JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_MULTIPLE_RELATIONSHIPS);
         GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI);
@@ -116,6 +115,12 @@ public class GraphWriterTests {
         Iterable<Node> newNodes  = () -> tx.findNodes(Label.label(LOCAL_lABEL));
         assertNotNull(newNodes);
         newNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
+        newNodes.forEach(node -> assertTrue(node.hasRelationship(RelationshipType.withName((TEST_REL_TYPE)))));
+        // this will fail because one of the nodes doesn't have a CONNECTED_TO and the other doesn't have LIKES
+
+        // change to test that the the start node has two relationships
+        // one being CONNECTED_TO and the other being LIKES
+        newNodes.forEach(node -> assertTrue(node.hasRelationship(RelationshipType.withName((TEST_REL_TYPE2)))));
         tx.commit();
 
 
@@ -124,6 +129,7 @@ public class GraphWriterTests {
     @Test
     void addNodeAndPropertiesTest1() throws Exception
     {
+        // untested
         assertNotNull(graphDatabaseAPI);
         JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
         GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI);
@@ -140,6 +146,7 @@ public class GraphWriterTests {
     @Test
     void addPropertiesToRelTest1() throws Exception
     {
+        // untested
         assertNotNull(graphDatabaseAPI);
         JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_PROPERTIES_TO_REL);
         GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI);
@@ -148,6 +155,9 @@ public class GraphWriterTests {
         Iterable<Node> newNodes  = () -> tx.findNodes(Label.label(LOCAL_lABEL));
         assertNotNull(newNodes);
         newNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
+        newNodes.forEach(node -> assertTrue(node.hasRelationship(RelationshipType.withName((TEST_REL_TYPE)))));
+        // check to see if the updated property and value exist
+        //
         tx.commit();
 
 
@@ -156,14 +166,15 @@ public class GraphWriterTests {
     @Test
     void nodePropertyChangeTest1() throws Exception
     {
+        // untested
         assertNotNull(graphDatabaseAPI);
         JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(NODE_PROPERTY_CHANGE);
         GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI);
         graphWriter.executeCRUDOperation();
         Transaction tx = graphDatabaseAPI.beginTx();
-        Iterable<Node> newNodes  = () -> tx.findNodes(Label.label(LOCAL_lABEL));
-        assertNotNull(newNodes);
-        newNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
+        Iterable<Node> changedNodes  = () -> tx.findNodes(Label.label(LOCAL_lABEL));
+        assertNotNull(changedNodes);
+        changedNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
         tx.commit();
 
 
@@ -172,14 +183,16 @@ public class GraphWriterTests {
     @Test
     void nodePropertyChangeTest2() throws Exception
     {
+        // untested
         assertNotNull(graphDatabaseAPI);
         JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(NODE_PROPERTY_CHANGE2);
         GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI);
         graphWriter.executeCRUDOperation();
         Transaction tx = graphDatabaseAPI.beginTx();
-        Iterable<Node> newNodes  = () -> tx.findNodes(Label.label(LOCAL_lABEL));
-        assertNotNull(newNodes);
-        newNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
+        Iterable<Node> changedNodes  = () -> tx.findNodes(Label.label(LOCAL_lABEL));
+        assertNotNull(changedNodes);
+        changedNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
+        // check to see if the nodes have the right properties and values.
         tx.commit();
 
 
@@ -188,6 +201,7 @@ public class GraphWriterTests {
     @Test
     void relPropertyChangeTest1() throws Exception
     {
+        // untested
         assertNotNull(graphDatabaseAPI);
         JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(REL_PROPERTY_CHANGE);
         GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI);
@@ -196,6 +210,7 @@ public class GraphWriterTests {
         Iterable<Node> newNodes  = () -> tx.findNodes(Label.label(LOCAL_lABEL));
         assertNotNull(newNodes);
         newNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
+        // check to see if the relationships have the right properties and values.
         tx.commit();
 
 
@@ -205,6 +220,7 @@ public class GraphWriterTests {
     @Test
     void relPropertyChangeTest2() throws Exception
     {
+        // untested
         assertNotNull(graphDatabaseAPI);
         JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
         GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI);
@@ -213,6 +229,7 @@ public class GraphWriterTests {
         Iterable<Node> newNodes  = () -> tx.findNodes(Label.label(LOCAL_lABEL));
         assertNotNull(newNodes);
         newNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
+        // check to see if the relationships have the right properties and values.
         tx.commit();
 
 
