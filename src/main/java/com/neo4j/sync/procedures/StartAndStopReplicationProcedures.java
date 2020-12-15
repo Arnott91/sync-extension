@@ -2,6 +2,7 @@ package com.neo4j.sync.procedures;
 
 import com.neo4j.sync.engine.ReplicationEngine;
 import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Mode;
@@ -21,7 +22,9 @@ public class StartAndStopReplicationProcedures {
             @Name(value = "password") String password) {
 
         if (replicationEngine == null) {
-            this.replicationEngine = new ReplicationEngine(GraphDatabase.driver(remoteDatabaseURI, AuthTokens.basic(username, password)));
+            Driver driver = GraphDatabase.driver( remoteDatabaseURI, AuthTokens.basic( username, password ) );
+            driver.verifyConnectivity();
+            this.replicationEngine = new ReplicationEngine( driver );
         }
         this.replicationEngine.start();
     }
