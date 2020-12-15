@@ -3,6 +3,7 @@ package com.neo4j.sync.engine;
 
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.neo4j.cypher.internal.physicalplanning.BREAK_FOR_LEAFS;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.graphdb.Label;
@@ -15,6 +16,14 @@ import org.neo4j.graphdb.*;
 
 public class GraphWriter {
 
+    public static final String ADD_NODE = "AddNode";
+    public static final String DELETE_NODE = "DeleteNode";
+    public static final String ADD_PROPERTY = "AddProperty";
+    public static final String NODE_PROPERTY_CHANGE = "NodePropertyChange";
+    public static final String ADD_RELATION = "AddRelation";
+    public static final String DELETE_RELATION = "DeleteRelation";
+    public static final String ADD_RELATION_PROPERTY = "AddRelationProperty";
+    public static final String REMOVE_RELATION_PROPERTY = "RemoveRelationProperty";
     private final List<Map<String, JSONObject>> transactionEvents;
     private String changeType;
     private  GraphDatabaseAPI graphDb;
@@ -30,6 +39,17 @@ public class GraphWriter {
 
     }
 
+    public GraphWriter(JSONObject graphTransaction, GraphDatabaseService graphDb, Log log) throws JSONException {
+
+        // split the transactionEvents JSON into a list of separate events
+
+        this.transactionEvents = TransactionDataParser.getTransactionEvents(graphTransaction);
+        this.graphDb = (GraphDatabaseAPI) graphDb;
+        this.log = log;
+
+
+    }
+
     public void executeCRUDOperation() throws JSONException {
 
         // logic to loop through all events in the event array and determine change type and then call delegate.
@@ -39,28 +59,28 @@ public class GraphWriter {
                 String k = e.getKey();
                 JSONObject v = e.getValue();
                 switch (k) {
-                    case "AddNode":
+                    case ADD_NODE:
                         this.delegateCRUDOperation(v,ChangeType.ADD_NODE);
                         break;
-                    case "DeleteNode":
+                    case DELETE_NODE:
                         this.delegateCRUDOperation(v,ChangeType.DELETE_NODE);
                         break;
-                    case "AddProperty":
+                    case ADD_PROPERTY:
                         this.delegateCRUDOperation(v,ChangeType.ADD_PROPERTY);
                         break;
-                    case "NodePropertyChange":
+                    case NODE_PROPERTY_CHANGE:
                         this.delegateCRUDOperation(v,ChangeType.NODE_PROPERTY_CHANGE);
                         break;
-                    case "AddRelation":
+                    case ADD_RELATION:
                         this.delegateCRUDOperation(v,ChangeType.ADD_RELATION);
                         break;
-                    case "DeleteRelation":
+                    case DELETE_RELATION:
                         this.delegateCRUDOperation(v,ChangeType.DELETE_RELATION);
                         break;
-                    case "AddRelationProperty":
+                    case ADD_RELATION_PROPERTY:
                         this.delegateCRUDOperation(v,ChangeType.ADD_RELATION_PROPERTY);
                         break;
-                    case "RemoveRelationProperty":
+                    case REMOVE_RELATION_PROPERTY:
                         this.delegateCRUDOperation(v,ChangeType.RELATION_PROPERTY_CHANGE);
 
                 }
@@ -111,10 +131,15 @@ public class GraphWriter {
             Node startNode = tx.findNode(startSearchLabel,startPrimaryKey[0],startPrimaryKey[1]);
             Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0],targetPrimaryKey[1]);
             Relationship singleRelationship = startNode.getSingleRelationship(RelationshipType.withName(TransactionDataParser.getRelationType(event)), Direction.OUTGOING);
-            for (int i = 0; i < removedProperties.length; i++){
-                singleRelationship.removeProperty(removedProperties[i]);
+            // make sure it's the relationship between the start and target nodes.
+
+            if (singleRelationship.getEndNode().equals(targetNode)) {
+
+                for (int i = 0; i < removedProperties.length; i++) {
+                    singleRelationship.removeProperty(removedProperties[i]);
+                }
+                if (properties.size() > 0) properties.forEach(singleRelationship::setProperty);
             }
-            if (properties.size() > 0) properties.forEach(singleRelationship::setProperty);
 
 
             tx.commit();
@@ -139,7 +164,11 @@ public class GraphWriter {
     }
 
     private void removeRelationProperties(JSONObject event) {
+
+
     }
+
+
 
     private void addRelationProperties(JSONObject event) throws JSONException {
 
@@ -149,6 +178,7 @@ public class GraphWriter {
 
         String[] startPrimaryKey = finder.getPrimaryKey(NodeDirection.START);
         String[] targetPrimaryKey = finder.getPrimaryKey(NodeDirection.TARGET);
+
         Map<String, String> properties = TransactionDataParser.getRelationProperties(event);
 
 
@@ -185,6 +215,7 @@ public class GraphWriter {
 
         String[] startPrimaryKey = finder.getPrimaryKey(NodeDirection.START);
         String[] targetPrimaryKey = finder.getPrimaryKey(NodeDirection.TARGET);
+
         Map<String, String> properties = TransactionDataParser.getRelationProperties(event);
 
 
@@ -227,8 +258,9 @@ public class GraphWriter {
         try (Transaction tx = graphDb.beginTx()) {
             Node startNode = tx.findNode(startSearchLabel,startPrimaryKey[0],startPrimaryKey[1]);
             Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0],targetPrimaryKey[1]);
+
             for (Relationship relationship : startNode.getRelationships(Direction.OUTGOING, RelationshipType.withName(TransactionDataParser.getRelationType(event)))) {
-                relationship.delete();
+                if (relationship.getEndNode().equals(targetNode)) relationship.delete();
             }
             tx.commit();
         } catch (Exception e) {
@@ -238,7 +270,7 @@ public class GraphWriter {
 
         } finally
         {
-            log.info("proc write complete");
+            log.info("delete relation completed");
 
 
         }
@@ -261,7 +293,7 @@ public class GraphWriter {
 
         } finally
         {
-            log.info("proc write complete");
+            log.info("delete node completed");
 
 
         }
@@ -301,7 +333,8 @@ public class GraphWriter {
 
         } finally
         {
-            log.info("proc write complete");
+            //log.info("proc write complete");
+            System.out.println("change node properties succeeded");
 
 
         }
