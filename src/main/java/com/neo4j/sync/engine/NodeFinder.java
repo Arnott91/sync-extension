@@ -38,7 +38,7 @@ public class NodeFinder {
         String[] primaryKey = new String[2];
 
         for (Map.Entry<String, String> entry : pk.entrySet()) {
-            primaryKey[0]= entry.getValue();
+            primaryKey[0]= entry.getKey();
             primaryKey[1] = entry.getValue();
 
 

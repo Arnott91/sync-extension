@@ -155,6 +155,7 @@ public class GraphWriter {
 
 
         try (Transaction tx = graphDb.beginTx()) {
+
             Node startNode = tx.findNode(startSearchLabel,startPrimaryKey[0],startPrimaryKey[1]);
             Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0],targetPrimaryKey[1]);
             Relationship singleRelationship = startNode.getSingleRelationship(RelationshipType.withName(TransactionDataParser.getRelationType(event)), Direction.OUTGOING);
@@ -190,11 +191,14 @@ public class GraphWriter {
 
 
         try (Transaction tx = graphDb.beginTx()) {
+            // first try and find the nodes.  If they don't exist we must create them.
+
             Node startNode = tx.findNode(startSearchLabel,startPrimaryKey[0],startPrimaryKey[1]);
+
             Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0],targetPrimaryKey[1]);
-            startNode.createRelationshipTo(targetNode,RelationshipType.withName(TransactionDataParser.getRelationType(event)));
-            Relationship singleRelationship = startNode.getSingleRelationship(RelationshipType.withName(TransactionDataParser.getRelationType(event)), Direction.OUTGOING);
-            if (properties.size() > 0) properties.forEach(singleRelationship::setProperty);
+
+            Relationship relationshipFrom = startNode.createRelationshipTo(targetNode, RelationshipType.withName(TransactionDataParser.getRelationType(event)));
+            if (properties.size() > 0) properties.forEach(relationshipFrom::setProperty);
 
 
             tx.commit();
@@ -205,7 +209,7 @@ public class GraphWriter {
 
         } finally
         {
-            log.info("proc write complete");
+            System.out.println("add relation succeeded");
 
 
         }

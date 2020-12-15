@@ -46,6 +46,7 @@ public class GraphWriterTests {
     private final String NODE_PROPERTY_CHANGE2 = "{\"transactionEvents\":[{\"changeType\":\"NodePropertyChange\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":null,\"targetNodeLabels\":null,\"targetPrimaryKey\":null,\"properties\":[{\"propertyName\":\"test\",\"oldValue\":\"foo\",\"newValue\":\"bar\"}],\"allProperties\":{\"test\":\"bar\",\"uuid\":\"123XYZ\"},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";
     private final String REL_PROPERTY_CHANGE = "{\"transactionEvents\":[{\"changeType\":\"RelationPropertyChange\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":\"CONNECTED_TO\",\"targetNodeLabels\":[\"Test\"],\"targetPrimaryKey\":{\"uuid\":\"XYZ123\"},\"properties\":[{\"propertyName\":\"weight\",\"oldValue\":1,\"newValue\":2}],\"allProperties\":{\"weight\":2},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";
     private static final String LOCAL_lABEL = "com.neo4j.sync.engine.LocalTx";
+    private static final String TEST_REL_TYPE = "CONNECTED_TO";
 
 
     @Inject
@@ -75,7 +76,7 @@ public class GraphWriterTests {
     void addNodeTest2() throws Exception
     {
         assertNotNull(graphDatabaseAPI);
-        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
+        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODES_AND_PROPERTIES);
         GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI);
         graphWriter.executeCRUDOperation();
         Transaction tx = graphDatabaseAPI.beginTx();
@@ -98,6 +99,7 @@ public class GraphWriterTests {
         Iterable<Node> newNodes  = () -> tx.findNodes(Label.label(LOCAL_lABEL));
         assertNotNull(newNodes);
         newNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
+        newNodes.forEach(node -> assertTrue(node.hasRelationship(RelationshipType.withName((TEST_REL_TYPE)))));
         tx.commit();
 
 
