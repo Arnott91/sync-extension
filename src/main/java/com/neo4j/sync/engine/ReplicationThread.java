@@ -7,11 +7,11 @@ import org.neo4j.logging.Log;
 
 import java.util.List;
 
-public class ReplicationThread  implements Runnable {
+public class ReplicationThread implements Runnable {
     private final GraphDatabaseAPI db;
     private final Log log;
     private final String sourceDBURI;
-    private Driver driver;
+    private final Driver driver;
     private String database;
 
     public ReplicationThread(GraphDatabaseAPI db, Log log, String sourceDBURI) {
@@ -19,7 +19,7 @@ public class ReplicationThread  implements Runnable {
         this.log = log;
         this.sourceDBURI = sourceDBURI;
         this.driver = GraphDatabase.driver(this.sourceDBURI,
-               AuthTokens.basic("foo", "bar")
+                AuthTokens.basic("foo", "bar")
         );
     }
 
@@ -53,16 +53,13 @@ public class ReplicationThread  implements Runnable {
         }
 
 
-
-
-
     }
 
-    private Session getSession (){
+    private Session getSession() {
         return driver.session();
     }
 
-    private List<Node> nodeListBuilder (String transactionData) {
+    private List<Node> nodeListBuilder(String transactionData) {
         // extract nodes to be created
         return null;
     }

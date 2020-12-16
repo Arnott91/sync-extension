@@ -9,23 +9,32 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import static com.neo4j.sync.engine.ReplicationEngine.Status.RUNNING;
+import static com.neo4j.sync.engine.ReplicationEngine.Status.STOPPED;
 
 public class ReplicationEngine {
     private final Driver driver;
-    private ScheduledExecutorService execService = Executors.newScheduledThreadPool(1);
+    private final ScheduledExecutorService execService;
     private ScheduledFuture<?> scheduledFuture;
-    private Status status;
+    private Status status = STOPPED;
     private long lastTransactionTimestamp;
     private final String LOCAL_TIMESTAMP_QUERY = "MATCH (ltr:LastTransactionReplicated) RETURN ltr.lastTimeRecorded";
     private final String REPLICATION_QUERY = "MATCH (tr:TransactionRecord) " +
             "WHERE tr.timeCreated > %d " +
             "RETURN tr.uuid, tr.timeCreated, tr.transactionData";
 
-    public ReplicationEngine(Driver driver ) {
+    public ReplicationEngine(Driver driver) {
+        this(driver, Executors.newScheduledThreadPool(1));
+    }
+
+    ReplicationEngine(Driver driver, ScheduledExecutorService executorService) {
         this.driver = driver;
+        this.execService = executorService;
     }
 
     public synchronized void start() {
+        if (status == RUNNING) {
+            return;
+        }
         scheduledFuture = execService.scheduleAtFixedRate(() -> {
             // TODO: change this for real cypher that pulls from the remote database
             // first, grab the timestamp of the last transaction to be replicated locally.
@@ -41,6 +50,9 @@ public class ReplicationEngine {
     }
 
     public void stop() {
+        if (status == STOPPED) {
+            return;
+        }
         scheduledFuture.cancel(true);
         status = Status.STOPPED;
     }
@@ -49,5 +61,5 @@ public class ReplicationEngine {
         return status;
     }
 
-    public enum Status { RUNNING, STOPPED}
+    public enum Status {RUNNING, STOPPED}
 }

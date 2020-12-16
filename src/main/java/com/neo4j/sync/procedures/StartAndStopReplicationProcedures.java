@@ -4,15 +4,16 @@ import com.neo4j.sync.engine.ReplicationEngine;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
-import org.neo4j.procedure.Description;
-import org.neo4j.procedure.Mode;
-import org.neo4j.procedure.Name;
-import org.neo4j.procedure.Procedure;
+import org.neo4j.logging.Log;
+import org.neo4j.procedure.*;
 
 import java.util.stream.Stream;
 
 public class StartAndStopReplicationProcedures {
     private static ReplicationEngine replicationEngine;
+
+    @Context
+    public Log log;
 
     @Procedure(name = "startReplication", mode = Mode.WRITE)
     @Description("starts the bilateral replication engine on this server.")
@@ -27,12 +28,14 @@ public class StartAndStopReplicationProcedures {
             this.replicationEngine = new ReplicationEngine( driver );
         }
         this.replicationEngine.start();
+        log.info("Replication from %s started.", remoteDatabaseURI);
     }
 
     @Procedure(name = "stopReplication", mode = Mode.WRITE)
     @Description("stops the bilateral replication engine on this server.")
     public void stopReplication() {
         this.replicationEngine.stop();
+        log.info("Replication stopped.");
     }
 
     @Procedure(name = "replicationStatus", mode = Mode.WRITE)

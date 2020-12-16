@@ -5,26 +5,15 @@ import com.neo4j.sync.procedures.StartAndStopReplicationProcedures;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.neo4j.driver.*;
+import org.neo4j.junit.jupiter.causal_cluster.*;
+import org.neo4j.test.jar.JarBuilder;
 import org.testcontainers.containers.Neo4jContainer;
 import org.testcontainers.shaded.com.google.common.io.Files;
 import org.testcontainers.utility.MountableFile;
 
 import java.io.IOException;
 import java.util.stream.Collectors;
-
-import org.neo4j.driver.AuthToken;
-import org.neo4j.driver.AuthTokens;
-import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
-import org.neo4j.driver.Result;
-import org.neo4j.driver.Session;
-import org.neo4j.driver.SessionConfig;
-import org.neo4j.junit.jupiter.causal_cluster.CausalCluster;
-import org.neo4j.junit.jupiter.causal_cluster.ClusterFactory;
-import org.neo4j.junit.jupiter.causal_cluster.CoreModifier;
-import org.neo4j.junit.jupiter.causal_cluster.NeedsCausalCluster;
-import org.neo4j.junit.jupiter.causal_cluster.Neo4jCluster;
-import org.neo4j.test.jar.JarBuilder;
 
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -87,79 +76,65 @@ public class EndToEndContainerIT {
     @BeforeAll
     public void setupTheIntegrationDB() {
 
-        sessionConfigOne = SessionConfig.builder().withDatabase( INTEGRATION_DB_NAME_1).build();
-        sessionConfigTwo = SessionConfig.builder().withDatabase( INTEGRATION_DB_NAME_2).build();
+        sessionConfigOne = SessionConfig.builder().withDatabase(INTEGRATION_DB_NAME_1).build();
+        sessionConfigTwo = SessionConfig.builder().withDatabase(INTEGRATION_DB_NAME_2).build();
 
         try (
                 Driver coreDriver = GraphDatabase.driver(clusterOne.getURI(), authToken);
-                Session systemSession = coreDriver.session(SessionConfig.forDatabase( "system" ));
-                Session session = coreDriver.session();
-        ) {
-            systemSession.run( String.format( "CREATE DATABASE %s IF NOT EXISTS WAIT", INTEGRATION_DB_NAME_1 ) )
-                      .consume();
-            var hostname = session.run("CALL dbms.listConfig('default_advertised_address')").stream().findFirst().get().get( "value" ).asString();
+                Session systemSession = coreDriver.session(SessionConfig.forDatabase("system"));
+                Session session = coreDriver.session()) {
+
+            systemSession.run(String.format("CREATE DATABASE %s IF NOT EXISTS WAIT", INTEGRATION_DB_NAME_1))
+                    .consume();
+            var hostname = session.run("CALL dbms.listConfig('default_advertised_address')").stream().findFirst().get().get("value").asString();
             clusterOneInternalAddress = "bolt://" + hostname + ":7687";
         }
 
         try (
                 Driver coreDriver = GraphDatabase.driver(clusterTwo.getURI(), authToken);
-                Session systemSession = coreDriver.session(SessionConfig.forDatabase( "system" ));
-                Session session = coreDriver.session();
-        ) {
-            systemSession.run( String.format( "CREATE DATABASE %s IF NOT EXISTS WAIT", INTEGRATION_DB_NAME_2 ) )
-                         .consume();
-            var hostname = session.run("CALL dbms.listConfig('default_advertised_address')").stream().findFirst().get().get( "value" ).asString();
+                Session systemSession = coreDriver.session(SessionConfig.forDatabase("system"));
+                Session session = coreDriver.session()) {
+
+            systemSession.run(String.format("CREATE DATABASE %s IF NOT EXISTS WAIT", INTEGRATION_DB_NAME_2))
+                    .consume();
+            var hostname = session.run("CALL dbms.listConfig('default_advertised_address')").stream().findFirst().get().get("value").asString();
             clusterTwoInternalAddress = "bolt://" + hostname + ":7687";
         }
     }
 
     @Test
-    public void pluginShouldBePresent()
-    {
-        try ( Driver coreDriver = GraphDatabase.driver( clusterTwo.getURI(), authToken ) ) {
-            Session session = coreDriver.session();
-            Result res = session.run( "CALL dbms.procedures() YIELD name, signature RETURN name, signature" );
-
-            // Then the procedure from the plugin is listed
-            assertThat( res.stream().anyMatch( x -> x.get( "name" ).asString().contains( "startReplication" ) ) )
-                    .as( "Procedure provided by our plugin should be present" )
-                    .isTrue();
-        }
-    }
-
-    @Test
-    public void shouldPullFromRemoteDatabaseAndStoreInLocalDatabase() {
+    public void shouldStartAndStopReplicationOnBothClusters() {
 
         try (
                 Driver coreDriver = GraphDatabase.driver(clusterOne.getURI(), authToken);
-                Session session = coreDriver.session(sessionConfigOne);
-        ) {
+                Session session = coreDriver.session(sessionConfigOne)) {
+
             session.run(format("CALL startReplication('%s', '%s', '%s')", clusterTwoInternalAddress, "neo4j", "password")).consume();
 
             Result res = session.run("CALL replicationStatus");
-            var statuses = res.stream().map( r -> r.get( "status" ).asString() ).collect( Collectors.toList());
-            assertThat(statuses).containsOnly( "running" );
+            var statuses = res.stream().map(r -> r.get("status").asString()).collect(Collectors.toList());
+            assertThat(statuses).containsOnly("running");
 
             session.run("CALL stopReplication()").consume();
             res = session.run("CALL replicationStatus");
-            statuses = res.stream().map( r -> r.get( "status" ).asString() ).collect( Collectors.toList());
-            assertThat(statuses).containsOnly( "stopped" );
-      }
+            statuses = res.stream().map(r -> r.get("status").asString()).collect(Collectors.toList());
+            assertThat(statuses).containsOnly("stopped");
+        }
 
         try (
                 Driver coreDriver = GraphDatabase.driver(clusterTwo.getURI(), authToken);
-                Session session = coreDriver.session(sessionConfigTwo);
-        ) {
+                Session session = coreDriver.session(sessionConfigTwo)) {
+
             session.run(format("CALL startReplication('%s', '%s', '%s')", clusterOneInternalAddress, "neo4j", "password"));
 
             Result res = session.run("CALL replicationStatus");
-            var statuses = res.stream().map( r -> r.get( "status" ).asString() ).collect( Collectors.toList());
-            assertThat(statuses).containsOnly( "running" );
+            var statuses = res.stream().map(r -> r.get("status").asString()).collect(Collectors.toList());
+            assertThat(statuses).containsOnly("running");
 
             session.run("CALL stopReplication()").consume();
             res = session.run("CALL replicationStatus");
-            statuses = res.stream().map( r -> r.get( "status" ).asString() ).collect( Collectors.toList());
-            assertThat(statuses).containsOnly( "stopped" );
+            statuses = res.stream().map(r -> r.get("status").asString()).collect(Collectors.toList());
+            assertThat(statuses).containsOnly("stopped");
         }
     }
 }

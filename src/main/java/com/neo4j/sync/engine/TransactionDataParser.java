@@ -5,7 +5,6 @@ import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
