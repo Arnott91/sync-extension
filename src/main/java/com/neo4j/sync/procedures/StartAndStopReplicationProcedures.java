@@ -46,7 +46,7 @@ public class StartAndStopReplicationProcedures {
     }
 
     public static class Output {
-        public String status;
+        public final String status;
 
         public Output(ReplicationEngine.Status status) {
             this.status = status.toString().toLowerCase();

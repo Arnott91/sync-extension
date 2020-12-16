@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 
 import static com.neo4j.sync.engine.ReplicationEngine.Status.RUNNING;
 import static com.neo4j.sync.engine.ReplicationEngine.Status.STOPPED;
+import static java.lang.String.format;
 
 public class ReplicationEngine {
     private final Driver driver;
@@ -46,8 +47,8 @@ public class ReplicationEngine {
             // or run the LOCAL_TIMESTAMP_QUERY;
 
             // next go and grab the transaction records from the remote database
+            Result run = driver.session().run(format(REPLICATION_QUERY, lastTransactionTimestamp));
 
-            Result run = driver.session().run(String.format(REPLICATION_QUERY, this.lastTransactionTimestamp));
             run.forEachRemaining(System.out::println);
 
             // next, write transactionData to the local database using the GraphWriter
