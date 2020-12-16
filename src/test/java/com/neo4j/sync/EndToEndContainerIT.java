@@ -103,19 +103,6 @@ public class EndToEndContainerIT {
     }
 
     @Test
-    public void pluginShouldBePresent() {
-        try (Driver coreDriver = GraphDatabase.driver(clusterTwo.getURI(), authToken)) {
-            Session session = coreDriver.session();
-            Result res = session.run("CALL dbms.procedures() YIELD name, signature RETURN name, signature");
-
-            // Then the procedure from the plugin is listed
-            assertThat(res.stream().anyMatch(x -> x.get("name").asString().contains("startReplication")))
-                    .as("Procedure provided by our plugin should be present")
-                    .isTrue();
-        }
-    }
-
-    @Test
     public void shouldStartAndStopReplicationOnBothClusters() {
 
         try (
