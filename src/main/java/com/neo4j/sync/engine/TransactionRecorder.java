@@ -1,14 +1,18 @@
 package com.neo4j.sync.engine;
 
-import java.sql.Timestamp;
-import java.util.*;
-
-
 import org.codehaus.jackson.map.ObjectMapper;
-import org.neo4j.graphdb.*;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.event.LabelEntry;
 import org.neo4j.graphdb.event.PropertyEntry;
 import org.neo4j.graphdb.event.TransactionData;
+
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /***
  * The transaction recorder is used to capture and serialize transaction information maintained

@@ -3,16 +3,12 @@ package com.neo4j.sync.engine;
 
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.neo4j.cypher.internal.physicalplanning.BREAK_FOR_LEAFS;
+import org.neo4j.graphdb.*;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
 
 import java.util.List;
 import java.util.Map;
-
-import org.neo4j.graphdb.*;
 
 public class GraphWriter {
 

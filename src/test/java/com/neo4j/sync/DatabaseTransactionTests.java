@@ -18,9 +18,6 @@ import org.junit.jupiter.api.TestInstance;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.test.extension.Inject;
 
-import java.util.List;
-import java.util.Map;
-
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)

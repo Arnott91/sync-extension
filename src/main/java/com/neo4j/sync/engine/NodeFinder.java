@@ -3,8 +3,6 @@ package com.neo4j.sync.engine;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import scala.util.parsing.json.JSON;
 
 import java.util.Map;
 

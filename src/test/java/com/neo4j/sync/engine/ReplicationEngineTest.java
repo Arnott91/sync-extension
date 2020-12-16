@@ -5,7 +5,7 @@ import org.neo4j.driver.Driver;
 
 import static com.neo4j.sync.engine.ReplicationEngine.Status.RUNNING;
 import static com.neo4j.sync.engine.ReplicationEngine.Status.STOPPED;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
 public class ReplicationEngineTest {
