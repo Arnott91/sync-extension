@@ -1,7 +1,6 @@
 package com.neo4j.sync.engine;
 
 
-
 /**
  * com.neo4j.sync.engine.TransactionRecord contains a collection of audit objects that reflect all of the changes resulting from
  * a single transaction.
@@ -10,21 +9,17 @@ package com.neo4j.sync.engine;
  */
 
 public class TransactionRecord {
-    public TransactionRecord(String timestampCreated, String status, String transactionData, String transactionUUID)
-    {
+    private final String timestampCreated;
+    private final String status;
+    private final String transactionData;
+    private final String transactionUUID;
+    public TransactionRecord(String timestampCreated, String status, String transactionData, String transactionUUID) {
 
         this.timestampCreated = timestampCreated;
         this.status = status;
         this.transactionData = this.wrapTransactionMessage(transactionData);
         this.transactionUUID = transactionUUID;
     }
-
-
-    private String timestampCreated;
-    private String status;
-    private String transactionData;
-    private String transactionUUID;
-
 
     public String getTransactionData() {
         return transactionData;
@@ -43,11 +38,11 @@ public class TransactionRecord {
         return transactionUUID;
     }
 
-    private  String wrapTransactionMessage(String transactionData) {
+    private String wrapTransactionMessage(String transactionData) {
         // remove the surrounding brackets of each transaction message.
         return "{\"transactionEvents\":" + transactionData + "}";
 
-    };
+    }
 
 
 }

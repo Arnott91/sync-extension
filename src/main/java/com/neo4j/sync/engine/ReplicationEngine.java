@@ -13,7 +13,7 @@ import static com.neo4j.sync.engine.ReplicationEngine.Status.STOPPED;
 
 public class ReplicationEngine {
     private final Driver driver;
-    private ScheduledExecutorService execService;
+    private final ScheduledExecutorService execService;
     private ScheduledFuture<?> scheduledFuture;
     private Status status = STOPPED;
 

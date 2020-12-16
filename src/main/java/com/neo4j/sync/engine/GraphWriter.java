@@ -22,7 +22,7 @@ public class GraphWriter {
     public static final String REMOVE_RELATION_PROPERTY = "RemoveRelationProperty";
     private final List<Map<String, JSONObject>> transactionEvents;
     private String changeType;
-    private  GraphDatabaseAPI graphDb;
+    private final GraphDatabaseAPI graphDb;
     private Log log;
 
     public GraphWriter(JSONObject graphTransaction, GraphDatabaseService graphDb) throws JSONException {
@@ -50,34 +50,34 @@ public class GraphWriter {
 
         // logic to loop through all events in the event array and determine change type and then call delegate.
 
-        for (Map<String, JSONObject> entry : transactionEvents){
+        for (Map<String, JSONObject> entry : transactionEvents) {
             for (Map.Entry<String, JSONObject> e : entry.entrySet()) {
                 String k = e.getKey();
                 JSONObject v = e.getValue();
                 switch (k) {
                     case ADD_NODE:
-                        this.delegateCRUDOperation(v,ChangeType.ADD_NODE);
+                        this.delegateCRUDOperation(v, ChangeType.ADD_NODE);
                         break;
                     case DELETE_NODE:
-                        this.delegateCRUDOperation(v,ChangeType.DELETE_NODE);
+                        this.delegateCRUDOperation(v, ChangeType.DELETE_NODE);
                         break;
                     case ADD_PROPERTY:
-                        this.delegateCRUDOperation(v,ChangeType.ADD_PROPERTY);
+                        this.delegateCRUDOperation(v, ChangeType.ADD_PROPERTY);
                         break;
                     case NODE_PROPERTY_CHANGE:
-                        this.delegateCRUDOperation(v,ChangeType.NODE_PROPERTY_CHANGE);
+                        this.delegateCRUDOperation(v, ChangeType.NODE_PROPERTY_CHANGE);
                         break;
                     case ADD_RELATION:
-                        this.delegateCRUDOperation(v,ChangeType.ADD_RELATION);
+                        this.delegateCRUDOperation(v, ChangeType.ADD_RELATION);
                         break;
                     case DELETE_RELATION:
-                        this.delegateCRUDOperation(v,ChangeType.DELETE_RELATION);
+                        this.delegateCRUDOperation(v, ChangeType.DELETE_RELATION);
                         break;
                     case ADD_RELATION_PROPERTY:
-                        this.delegateCRUDOperation(v,ChangeType.ADD_RELATION_PROPERTY);
+                        this.delegateCRUDOperation(v, ChangeType.ADD_RELATION_PROPERTY);
                         break;
                     case REMOVE_RELATION_PROPERTY:
-                        this.delegateCRUDOperation(v,ChangeType.RELATION_PROPERTY_CHANGE);
+                        this.delegateCRUDOperation(v, ChangeType.RELATION_PROPERTY_CHANGE);
 
                 }
 
@@ -90,21 +90,29 @@ public class GraphWriter {
     private void delegateCRUDOperation(JSONObject event, ChangeType changeType) throws JSONException {
 
         switch (changeType) {
-            case ADD_NODE: this.addNode(event);
-            break;
-            case ADD_PROPERTY: this.addProperties(event);
-            break;
-            case NODE_PROPERTY_CHANGE: this.changeNodeProperties(event);
-            break;
-            case DELETE_NODE: this.deleteNodes(event);
-            break;
-            case DELETE_RELATION: this.deleteRelation(event);
-            break;
-            case ADD_RELATION: this.addRelation(event);
-            break;
-            case ADD_RELATION_PROPERTY: this.addRelationProperties(event);
-            break;
-            case RELATION_PROPERTY_CHANGE: this.changeRelationProperties(event);
+            case ADD_NODE:
+                this.addNode(event);
+                break;
+            case ADD_PROPERTY:
+                this.addProperties(event);
+                break;
+            case NODE_PROPERTY_CHANGE:
+                this.changeNodeProperties(event);
+                break;
+            case DELETE_NODE:
+                this.deleteNodes(event);
+                break;
+            case DELETE_RELATION:
+                this.deleteRelation(event);
+                break;
+            case ADD_RELATION:
+                this.addRelation(event);
+                break;
+            case ADD_RELATION_PROPERTY:
+                this.addRelationProperties(event);
+                break;
+            case RELATION_PROPERTY_CHANGE:
+                this.changeRelationProperties(event);
         }
 
     }
@@ -121,11 +129,9 @@ public class GraphWriter {
         String[] removedProperties = TransactionDataParser.getRemovedProperties(event);
 
 
-
-
         try (Transaction tx = graphDb.beginTx()) {
-            Node startNode = tx.findNode(startSearchLabel,startPrimaryKey[0],startPrimaryKey[1]);
-            Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0],targetPrimaryKey[1]);
+            Node startNode = tx.findNode(startSearchLabel, startPrimaryKey[0], startPrimaryKey[1]);
+            Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0], targetPrimaryKey[1]);
             Relationship singleRelationship = startNode.getSingleRelationship(RelationshipType.withName(TransactionDataParser.getRelationType(event)), Direction.OUTGOING);
             // make sure it's the relationship between the start and target nodes.
 
@@ -144,9 +150,8 @@ public class GraphWriter {
             //this.logException(e, databaseService);
             System.out.println(e.getMessage());
 
-        } finally
-        {
-           System.out.println("proc write complete");
+        } finally {
+            System.out.println("proc write complete");
 
 
         }
@@ -165,7 +170,6 @@ public class GraphWriter {
     }
 
 
-
     private void addRelationProperties(JSONObject event) throws JSONException {
 
         NodeFinder finder = new NodeFinder(event);
@@ -178,12 +182,10 @@ public class GraphWriter {
         Map<String, String> properties = TransactionDataParser.getRelationProperties(event);
 
 
-
-
         try (Transaction tx = graphDb.beginTx()) {
 
-            Node startNode = tx.findNode(startSearchLabel,startPrimaryKey[0],startPrimaryKey[1]);
-            Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0],targetPrimaryKey[1]);
+            Node startNode = tx.findNode(startSearchLabel, startPrimaryKey[0], startPrimaryKey[1]);
+            Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0], targetPrimaryKey[1]);
             Relationship singleRelationship = startNode.getSingleRelationship(RelationshipType.withName(TransactionDataParser.getRelationType(event)), Direction.OUTGOING);
             if (properties.size() > 0) properties.forEach(singleRelationship::setProperty);
 
@@ -194,8 +196,7 @@ public class GraphWriter {
             //this.logException(e, databaseService);
             System.out.println(e.getMessage());
 
-        } finally
-        {
+        } finally {
             log.info("proc write complete");
 
 
@@ -215,14 +216,12 @@ public class GraphWriter {
         Map<String, String> properties = TransactionDataParser.getRelationProperties(event);
 
 
-
-
         try (Transaction tx = graphDb.beginTx()) {
             // first try and find the nodes.  If they don't exist we must create them.
 
-            Node startNode = tx.findNode(startSearchLabel,startPrimaryKey[0],startPrimaryKey[1]);
+            Node startNode = tx.findNode(startSearchLabel, startPrimaryKey[0], startPrimaryKey[1]);
 
-            Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0],targetPrimaryKey[1]);
+            Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0], targetPrimaryKey[1]);
 
             Relationship relationshipFrom = startNode.createRelationshipTo(targetNode, RelationshipType.withName(TransactionDataParser.getRelationType(event)));
             if (properties.size() > 0) properties.forEach(relationshipFrom::setProperty);
@@ -234,8 +233,7 @@ public class GraphWriter {
             //this.logException(e, databaseService);
             System.out.println(e.getMessage());
 
-        } finally
-        {
+        } finally {
             System.out.println("add relation succeeded");
 
 
@@ -252,8 +250,8 @@ public class GraphWriter {
         String[] targetPrimaryKey = finder.getPrimaryKey(NodeDirection.TARGET);
 
         try (Transaction tx = graphDb.beginTx()) {
-            Node startNode = tx.findNode(startSearchLabel,startPrimaryKey[0],startPrimaryKey[1]);
-            Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0],targetPrimaryKey[1]);
+            Node startNode = tx.findNode(startSearchLabel, startPrimaryKey[0], startPrimaryKey[1]);
+            Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0], targetPrimaryKey[1]);
 
             for (Relationship relationship : startNode.getRelationships(Direction.OUTGOING, RelationshipType.withName(TransactionDataParser.getRelationType(event)))) {
                 if (relationship.getEndNode().equals(targetNode)) relationship.delete();
@@ -264,8 +262,7 @@ public class GraphWriter {
             //this.logException(e, databaseService);
             System.out.println(e.getMessage());
 
-        } finally
-        {
+        } finally {
             log.info("delete relation completed");
 
 
@@ -279,7 +276,7 @@ public class GraphWriter {
         String[] primaryKey = finder.getPrimaryKey();
 
         try (Transaction tx = graphDb.beginTx()) {
-            Node foundNode = tx.findNode(searchLabel,primaryKey[0],primaryKey[1]);
+            Node foundNode = tx.findNode(searchLabel, primaryKey[0], primaryKey[1]);
             foundNode.delete();
             tx.commit();
         } catch (Exception e) {
@@ -287,8 +284,7 @@ public class GraphWriter {
             //this.logException(e, databaseService);
             System.out.println(e.getMessage());
 
-        } finally
-        {
+        } finally {
             log.info("delete node completed");
 
 
@@ -308,7 +304,7 @@ public class GraphWriter {
         // we need the primary key to find the node
 
         try (Transaction tx = graphDb.beginTx()) {
-            Node foundNode = tx.findNode(searchLabel,primaryKey[0],primaryKey[1]);
+            Node foundNode = tx.findNode(searchLabel, primaryKey[0], primaryKey[1]);
 
             for (int i = 0; i < removedPropertyKeys.length; i++) {
                 foundNode.removeProperty(removedPropertyKeys[i]);
@@ -317,7 +313,7 @@ public class GraphWriter {
             for (Map.Entry<String, String> entry : changedProperties.entrySet()) {
                 String k = entry.getKey();
                 String v = entry.getValue();
-                foundNode.setProperty(k,v);
+                foundNode.setProperty(k, v);
             }
             tx.commit();
 
@@ -327,8 +323,7 @@ public class GraphWriter {
             //this.logException(e, databaseService);
             System.out.println(e.getMessage());
 
-        } finally
-        {
+        } finally {
             //log.info("proc write complete");
             System.out.println("change node properties succeeded");
 
@@ -346,12 +341,9 @@ public class GraphWriter {
         Map<String, String> properties = TransactionDataParser.getNodeProperties(event);
 
 
-
-
-
         try (Transaction tx = graphDb.beginTx()) {
 
-            Node foundNode = tx.findNode(searchLabel,primaryKey[0],primaryKey[1]);
+            Node foundNode = tx.findNode(searchLabel, primaryKey[0], primaryKey[1]);
             properties.forEach(foundNode::setProperty);
 
 
@@ -360,8 +352,7 @@ public class GraphWriter {
 
             System.out.println(e.getMessage());
 
-        } finally
-        {
+        } finally {
             //log.info("proc write complete");
             System.out.println("add properties completed");
 
@@ -393,20 +384,13 @@ public class GraphWriter {
             //this.logException(e, databaseService);
             System.out.println(e.getMessage());
 
-        } finally
-        {
+        } finally {
             //log.info("proc write complete");
             System.out.println("add node succeeded");
 
 
         }
     }
-
-
-
-
-
-
 
 
 }
