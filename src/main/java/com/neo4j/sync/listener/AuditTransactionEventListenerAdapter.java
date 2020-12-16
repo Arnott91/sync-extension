@@ -14,6 +14,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import java.util.function.Supplier;
+import java.util.logging.Logger;
 
 /**
  * Protocol is as follows.
@@ -94,13 +95,14 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
 
         if (logTransaction) {
             try {
-                TransactionFileLogger.AppendTransactionLog(this.txData, this.beforeCommitTxId, data.getTransactionId(), this.transactionTimestamp);
+                TransactionFileLogger.AppendTransactionLog(txData, beforeCommitTxId, data.getTransactionId(),
+                        transactionTimestamp,
+                        ((GraphDatabaseAPI) databaseService).getDependencyResolver().provideDependency(LogProvider.class).get());
             } catch (Exception e) {
                 logException(e, databaseService);
             } finally {
                 logTransaction = false;
             }
-
         }
     }
 
@@ -112,8 +114,6 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
         if (replicate) {
             try {
                 TransactionFileLogger.AppendRollbackTransactionLog(this.beforeCommitTxId, this.transactionTimestamp);
-
-
             } catch (Exception e) {
                 // log exception
                 logException(e, databaseService);
@@ -122,11 +122,8 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
     }
 
     private void logException(Exception e, GraphDatabaseService databaseService) {
-
-        Supplier<LogProvider> logProviderSupplier = ((GraphDatabaseAPI) databaseService).getDependencyResolver().provideDependency(LogProvider.class);
-        LogProvider logProvider = logProviderSupplier.get();
-        Log log = logProvider.getLog(this.getClass());
-        log.info("Service Extension Event Handler error: %s" , e.getMessage());
+        ((GraphDatabaseAPI) databaseService).getDependencyResolver().provideDependency(LogProvider.class).get()
+                .getLog(this.getClass()).info("Service Extension Event Handler error: %s" , e.getMessage());
     }
 }
 
