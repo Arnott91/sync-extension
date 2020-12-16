@@ -15,6 +15,11 @@ public class ReplicationEngine {
     private ScheduledExecutorService execService = Executors.newScheduledThreadPool(1);
     private ScheduledFuture<?> scheduledFuture;
     private Status status;
+    private long lastTransactionTimestamp;
+    private final String LOCAL_TIMESTAMP_QUERY = "MATCH (ltr:LastTransactionReplicated) RETURN ltr.lastTimeRecorded";
+    private final String REPLICATION_QUERY = "MATCH (tr:TransactionRecord) " +
+            "WHERE tr.timeCreated > %d " +
+            "RETURN tr.uuid, tr.timeCreated, tr.transactionData";
 
     public ReplicationEngine(Driver driver ) {
         this.driver = driver;
@@ -23,7 +28,12 @@ public class ReplicationEngine {
     public synchronized void start() {
         scheduledFuture = execService.scheduleAtFixedRate(() -> {
             // TODO: change this for real cypher that pulls from the remote database
-            Result run = driver.session().run("MATCH (n) RETURN (n)");
+            // first, grab the timestamp of the last transaction to be replicated locally.
+            // tx.findNode(Label.label("LastTransactionReplicated"))
+            // and get the lastTimeRecorded property
+            // or run the LOCAL_TIMESTAMP_QUERY;
+
+            Result run = driver.session().run(String.format(REPLICATION_QUERY, this.lastTransactionTimestamp));
             run.forEachRemaining(System.out::println);
 
         }, 0, 60L, TimeUnit.SECONDS);
