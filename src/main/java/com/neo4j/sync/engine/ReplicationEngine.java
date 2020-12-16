@@ -17,10 +17,13 @@ public class ReplicationEngine {
     private ScheduledFuture<?> scheduledFuture;
     private Status status = STOPPED;
     private long lastTransactionTimestamp;
-    private final String LOCAL_TIMESTAMP_QUERY = "MATCH (ltr:LastTransactionReplicated) RETURN ltr.lastTimeRecorded";
+    private long transactionRecordTimestamp;
+    private final String LOCAL_TIMESTAMP_QUERY = "MATCH (ltr:LastTransactionReplicated {id:'SINGLETON'}) RETURN ltr.lastTimeRecorded";
     private final String REPLICATION_QUERY = "MATCH (tr:TransactionRecord) " +
             "WHERE tr.timeCreated > %d " +
             "RETURN tr.uuid, tr.timeCreated, tr.transactionData";
+    private final String UPDATE_LAST_TRANSACTION_TIMESTAMP_QUERY = "MERGE (ltr:LastTransactionReplicated {id:'SINGLETON'}) " +
+            "SET tr.lastTimeRecorded = %d";
 
     public ReplicationEngine(Driver driver) {
         this(driver, Executors.newScheduledThreadPool(1));
@@ -42,8 +45,14 @@ public class ReplicationEngine {
             // and get the lastTimeRecorded property
             // or run the LOCAL_TIMESTAMP_QUERY;
 
+            // next go and grab the transaction records from the remote database
+
             Result run = driver.session().run(String.format(REPLICATION_QUERY, this.lastTransactionTimestamp));
             run.forEachRemaining(System.out::println);
+
+            // next, write transactionData to the local database using the GraphWriter
+            // finally update the local singleton node that keeps track of the timestamp of the last replicated record
+            // tx.execute(String.format(UPDATE_LAST_TRANSACTION_TIMESTAMP_QUERY, this.transactionRecordTimestamp)
 
         }, 0, 60L, TimeUnit.SECONDS);
         status = RUNNING;
