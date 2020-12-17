@@ -2,6 +2,7 @@ package com.neo4j.sync.engine;
 
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Result;
+import org.neo4j.graphdb.GraphDatabaseService;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -26,7 +27,7 @@ public class ReplicationEngine {
     private final String UPDATE_LAST_TRANSACTION_TIMESTAMP_QUERY = "MERGE (ltr:LastTransactionReplicated {id:'SINGLETON'}) " +
             "SET tr.lastTimeRecorded = %d";
 
-    public ReplicationEngine(Driver driver) {
+    public ReplicationEngine(Driver driver, GraphDatabaseService gds) {
         this(driver, Executors.newScheduledThreadPool(1));
     }
 

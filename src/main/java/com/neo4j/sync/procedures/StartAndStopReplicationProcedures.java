@@ -4,6 +4,7 @@ import com.neo4j.sync.engine.ReplicationEngine;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.*;
 
@@ -14,6 +15,7 @@ public class StartAndStopReplicationProcedures {
 
     @Context
     public Log log;
+    public GraphDatabaseService gds;
 
     @Procedure(name = "startReplication", mode = Mode.WRITE)
     @Description("starts the bilateral replication engine on this server.")
@@ -25,7 +27,7 @@ public class StartAndStopReplicationProcedures {
         if (replicationEngine == null) {
             Driver driver = GraphDatabase.driver( remoteDatabaseURI, AuthTokens.basic( username, password ) );
             driver.verifyConnectivity();
-            this.replicationEngine = new ReplicationEngine( driver );
+            this.replicationEngine = new ReplicationEngine( driver, gds );
         }
         this.replicationEngine.start();
         log.info("Replication from %s started.", remoteDatabaseURI);
