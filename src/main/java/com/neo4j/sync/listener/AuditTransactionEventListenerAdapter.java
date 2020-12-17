@@ -13,9 +13,6 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-import java.util.function.Supplier;
-import java.util.logging.Logger;
-
 /**
  * Protocol is as follows.
  * <p>
@@ -23,6 +20,7 @@ import java.util.logging.Logger;
  * Change capture happens before commit and logging occurs after.
  * Transaction records are written locally and pulled by the destination server.
  * Clients can also read a copy of the transaction history from the transaction replication log files.
+ * </p>
  *
  * @author Chris Upkes
  * @author Jim Webber
@@ -39,6 +37,7 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
     private String txData;
     private boolean logTransaction = false;
     private boolean replicate = false;
+
 
     @Override
     public Node beforeCommit(TransactionData data, Transaction transaction, GraphDatabaseService databaseService)
@@ -76,8 +75,7 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
                 txRecordNode.setProperty(TX_RECORD_TX_DATA_KEY, txRecord.getTransactionData());
                 tx.commit();
             } catch (Exception e) {
-                // log exception
-                logException(e, databaseService);
+                getLog(databaseService).error(e.getMessage(), e);
             } finally {
                 logTransaction = true;
             }
@@ -86,6 +84,10 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
         // I tried returning the txRecordNode in the above try - catch statement and I didn't get a handle
         // to it in the afterCommit.  Should double-check.
         return null;
+    }
+
+    private Log getLog(GraphDatabaseService databaseService) {
+        return ((GraphDatabaseAPI) databaseService).getDependencyResolver().provideDependency(LogProvider.class).get().getLog(this.getClass());
     }
 
     @Override
@@ -97,9 +99,9 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
             try {
                 TransactionFileLogger.AppendTransactionLog(txData, beforeCommitTxId, data.getTransactionId(),
                         transactionTimestamp,
-                        ((GraphDatabaseAPI) databaseService).getDependencyResolver().provideDependency(LogProvider.class).get());
+                        getLog(databaseService));
             } catch (Exception e) {
-                logException(e, databaseService);
+                getLog(databaseService).error(e.getMessage(), e);
             } finally {
                 logTransaction = false;
             }
@@ -113,17 +115,12 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
 
         if (replicate) {
             try {
-                TransactionFileLogger.AppendRollbackTransactionLog(this.beforeCommitTxId, this.transactionTimestamp);
+                TransactionFileLogger.AppendRollbackTransactionLog(this.beforeCommitTxId, this.transactionTimestamp, getLog(databaseService));
             } catch (Exception e) {
                 // log exception
-                logException(e, databaseService);
+                getLog(databaseService).error(e.getMessage(), e);
             }
         }
-    }
-
-    private void logException(Exception e, GraphDatabaseService databaseService) {
-        ((GraphDatabaseAPI) databaseService).getDependencyResolver().provideDependency(LogProvider.class).get()
-                .getLog(this.getClass()).info("Service Extension Event Handler error: %s" , e.getMessage());
     }
 }
 

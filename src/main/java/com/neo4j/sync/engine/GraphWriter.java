@@ -6,6 +6,7 @@ import org.codehaus.jettison.json.JSONObject;
 import org.neo4j.graphdb.*;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
+import org.neo4j.logging.LogProvider;
 
 import java.util.List;
 import java.util.Map;
@@ -24,14 +25,6 @@ public class GraphWriter {
     private String changeType;
     private final GraphDatabaseAPI graphDb;
     private Log log;
-
-    public GraphWriter(JSONObject graphTransaction, GraphDatabaseService graphDb) throws JSONException {
-
-        // split the transactionEvents JSON into a list of separate events
-
-        this.transactionEvents = TransactionDataParser.getTransactionEvents(graphTransaction);
-        this.graphDb = (GraphDatabaseAPI) graphDb;
-    }
 
     public GraphWriter(JSONObject graphTransaction, GraphDatabaseService graphDb, Log log) throws JSONException {
 

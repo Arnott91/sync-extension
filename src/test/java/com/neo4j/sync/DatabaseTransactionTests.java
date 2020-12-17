@@ -16,8 +16,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.logging.Log;
 import org.neo4j.test.extension.Inject;
 
+import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
@@ -361,7 +363,7 @@ public class DatabaseTransactionTests {
 
         var graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
         GraphDatabase graphDb = new GraphDatabase();
-        var writer = new GraphWriter(graphTxTranslation, (GraphDatabaseService) graphDb);
+        var writer = new GraphWriter(graphTxTranslation, (GraphDatabaseService) graphDb, mock(Log.class));
         writer.executeCRUDOperation();
 
     }
@@ -378,7 +380,7 @@ public class DatabaseTransactionTests {
 
         JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(DELETE_NODE);
         GraphDatabaseService graphDb = cluster.getMemberWithAnyRole(DEFAULT_DATABASE_NAME, Role.LEADER).database(DEFAULT_DATABASE_NAME);
-        GraphWriter writer = new GraphWriter(graphTxTranslation, graphDb);
+        GraphWriter writer = new GraphWriter(graphTxTranslation, graphDb, mock(Log.class));
         writer.executeCRUDOperation();
 
     }
@@ -395,7 +397,7 @@ public class DatabaseTransactionTests {
 
         JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
         GraphDatabaseService graphDb = cluster.getMemberWithAnyRole(DEFAULT_DATABASE_NAME, Role.LEADER).database(DEFAULT_DATABASE_NAME);
-        GraphWriter writer = new GraphWriter(graphTxTranslation, graphDb);
+        GraphWriter writer = new GraphWriter(graphTxTranslation, graphDb, mock(Log.class));
         writer.executeCRUDOperation();
 
     }
@@ -412,7 +414,7 @@ public class DatabaseTransactionTests {
 
         JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
         GraphDatabaseService graphDb = cluster.getMemberWithAnyRole(DEFAULT_DATABASE_NAME, Role.LEADER).database(DEFAULT_DATABASE_NAME);
-        GraphWriter writer = new GraphWriter(graphTxTranslation, graphDb);
+        GraphWriter writer = new GraphWriter(graphTxTranslation, graphDb, mock(Log.class));
         writer.executeCRUDOperation();
 
     }
@@ -429,7 +431,7 @@ public class DatabaseTransactionTests {
 
         JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
         GraphDatabaseService graphDb = cluster.getMemberWithAnyRole(DEFAULT_DATABASE_NAME, Role.LEADER).database(DEFAULT_DATABASE_NAME);
-        GraphWriter writer = new GraphWriter(graphTxTranslation, graphDb);
+        GraphWriter writer = new GraphWriter(graphTxTranslation, graphDb, mock(Log.class));
         writer.executeCRUDOperation();
 
     }
@@ -446,7 +448,7 @@ public class DatabaseTransactionTests {
 
         JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
         GraphDatabaseService graphDb = cluster.getMemberWithAnyRole(DEFAULT_DATABASE_NAME, Role.LEADER).database(DEFAULT_DATABASE_NAME);
-        GraphWriter writer = new GraphWriter(graphTxTranslation, graphDb);
+        GraphWriter writer = new GraphWriter(graphTxTranslation, graphDb, mock(Log.class));
         writer.executeCRUDOperation();
 
     }
@@ -463,7 +465,7 @@ public class DatabaseTransactionTests {
 
         JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
         GraphDatabaseService graphDb = cluster.getMemberWithAnyRole(DEFAULT_DATABASE_NAME, Role.LEADER).database(DEFAULT_DATABASE_NAME);
-        GraphWriter writer = new GraphWriter(graphTxTranslation, graphDb);
+        GraphWriter writer = new GraphWriter(graphTxTranslation, graphDb, mock(Log.class));
         writer.executeCRUDOperation();
 
     }
@@ -495,9 +497,7 @@ public class DatabaseTransactionTests {
         {
             tx.execute(query);
             tx.commit();
-
         });
-
     }
 
 
@@ -524,9 +524,7 @@ public class DatabaseTransactionTests {
         {
             tx.execute(query);
             tx.commit();
-
         });
-
     }
 
     @Test
@@ -552,7 +550,6 @@ public class DatabaseTransactionTests {
         {
             tx.execute(query);
             tx.commit();
-
         });
 
     }
@@ -580,10 +577,6 @@ public class DatabaseTransactionTests {
         {
             tx.execute(query);
             tx.commit();
-
         });
-
     }
-
-
 }

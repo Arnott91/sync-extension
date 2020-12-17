@@ -38,7 +38,7 @@ public class TransactionFileLogger {
         }
     }
 
-    public static void AppendTransactionLog(String transactionData, String transactionUUID, long transactionId, long transactionTimestamp, LogProvider log) throws IOException {
+    public static void AppendTransactionLog(String transactionData, String transactionUUID, long transactionId, long transactionTimestamp, Log log) {
 
         initializeTxLogFile();
 
@@ -49,11 +49,11 @@ public class TransactionFileLogger {
         try (FileWriter logWriter = new FileWriter(logFile, true)) {
             logWriter.write(transactionRecord);
         } catch (IOException e) {
-            log.getLog(TransactionFileLogger.class).error(e.getMessage());
+            log.error(e.getMessage(), e);
         }
     }
 
-    public static void AppendRollbackTransactionLog(String transactionUUID, long transactionTimestamp) throws IOException {
+    public static void AppendRollbackTransactionLog(String transactionUUID, long transactionTimestamp, Log log) {
 
         initializeTxRollbackLogFile();
 
@@ -62,10 +62,9 @@ public class TransactionFileLogger {
         File logFile = new File(rbLogFileFullPath);
 
         try (FileWriter logWriter = new FileWriter(logFile, true)) {
-
             logWriter.write(rBTransactionRecord);
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            log.error(e.getMessage(), e);
         }
     }
 }
