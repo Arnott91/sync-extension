@@ -40,7 +40,6 @@ public class ReplicationEngine {
             return;
         }
         scheduledFuture = execService.scheduleAtFixedRate(() -> {
-            // TODO: change this for real cypher that pulls from the remote database
             // first, grab the timestamp of the last transaction to be replicated locally.
             // tx.findNode(Label.label("LastTransactionReplicated"))
             // and get the lastTimeRecorded property
