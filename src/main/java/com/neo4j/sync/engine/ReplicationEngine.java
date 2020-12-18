@@ -1,16 +1,12 @@
 package com.neo4j.sync.engine;
 
-import org.codehaus.jettison.json.JSONException;
-import org.codehaus.jettison.json.JSONObject;
+import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Result;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.logging.Log;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Transaction;
 
-import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -26,7 +22,6 @@ public class ReplicationEngine {
     private ScheduledFuture<?> scheduledFuture;
     private GraphDatabaseService gds;
     private Log log;
-    private Status status = STOPPED;
     private long lastTransactionTimestamp;
     private long transactionRecordTimestamp;
     private final String LOCAL_TIMESTAMP_QUERY = "MATCH (ltr:LastTransactionReplicated {id:'SINGLETON'}) RETURN ltr.lastTimeRecorded";
@@ -36,34 +31,44 @@ public class ReplicationEngine {
     private final String UPDATE_LAST_TRANSACTION_TIMESTAMP_QUERY = "MERGE (ltr:LastTransactionReplicated {id:'SINGLETON'}) " +
             "SET tr.lastTimeRecorded = %d";
 
-    public ReplicationEngine(Driver driver, GraphDatabaseService gds, Log log) {
-        this(driver, Executors.newScheduledThreadPool(1));
-        this.gds = gds;
+    private static ReplicationEngine instance;
+    private Status status;
+
+    private ReplicationEngine(Driver driver) {
+        this.driver = driver;
+        this.execService = Executors.newScheduledThreadPool(1);
     }
 
-    ReplicationEngine(Driver driver, ScheduledExecutorService executorService) {
-        this.driver = driver;
-        this.execService = executorService;
+    public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password) {
+        if (instance != null) {
+            instance.stop();
+        }
+
+        instance = new ReplicationEngine(
+                GraphDatabase.driver(remoteDatabaseURI, AuthTokens.basic(username, password)));
+        return instance();
+
+    }
+
+    public static ReplicationEngine instance() {
+        return instance;
     }
 
     public synchronized void start() {
-        if (status == RUNNING) {
-            return;
-        }
         scheduledFuture = execService.scheduleAtFixedRate(() -> {
-                    // first, grab the timestamp of the last transaction to be replicated locally.
+            // first, grab the timestamp of the last transaction to be replicated locally.
 
-                    this.lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(gds);
+            this.lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(gds);
 
-                    // next go and grab the transaction records from the remote database
-                    Result run = driver.session().run(format(REPLICATION_QUERY, lastTransactionTimestamp));
+            // next go and grab the transaction records from the remote database
+            Result run = driver.session().run(format(REPLICATION_QUERY, lastTransactionTimestamp));
 
-                    run.forEachRemaining(System.out::println);
+            run.forEachRemaining(System.out::println);
 
-                    // this.transactionRecordTimestamp = run.next().get("timeCreated").asLong();
+            // this.transactionRecordTimestamp = run.next().get("timeCreated").asLong();
 
-                    // next, write transactionData to the local database using the GraphWriter
-                    //
+            // next, write transactionData to the local database using the GraphWriter
+            //
 //            try  {
 //                GraphWriter writer = new GraphWriter("{test:}",gds, log);
 //                writer.executeCRUDOperation();
@@ -75,8 +80,8 @@ public class ReplicationEngine {
 //
 //            } finally
 //            {
-                    //TransactionHistoryManager.setLastReplicationTimestamp(gds,this.transactionRecordTimestamp);
-     //           }
+            //TransactionHistoryManager.setLastReplicationTimestamp(gds,this.transactionRecordTimestamp);
+            //           }
 
 
 //            ;
@@ -86,17 +91,16 @@ public class ReplicationEngine {
             // tx.execute(String.format(UPDATE_LAST_TRANSACTION_TIMESTAMP_QUERY, this.transactionRecordTimestamp)
 
 
-
         }, 0, 60L, TimeUnit.SECONDS);
-        status = RUNNING;
+
+        this.status = RUNNING;
     }
 
     public void stop() {
-        if (status == STOPPED) {
-            return;
+        if (this.status == RUNNING) {
+            scheduledFuture.cancel(true);
         }
-        scheduledFuture.cancel(true);
-        status = Status.STOPPED;
+        this.status = STOPPED;
     }
 
     public Status status() {
@@ -104,6 +108,4 @@ public class ReplicationEngine {
     }
 
     public enum Status {RUNNING, STOPPED}
-
-
 }
