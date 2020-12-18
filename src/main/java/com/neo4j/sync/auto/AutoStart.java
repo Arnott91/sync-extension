@@ -21,7 +21,7 @@ public class AutoStart extends LifecycleAdapter {
         availabilityGuard.addListener(new AvailabilityListener() {
             @Override
             public void available() {
-                log.info("Do clever stuff here to check if auto mode is engaged and start the replicatio engine");
+                log.info("Do clever stuff here to check if auto mode is engaged and start the replication engine");
             }
 
             @Override
