@@ -1,2 +1,2 @@
 com.neo4j.sync.listener.AuditTransactionEventListenerAdapter
-com.neo4j.sync.listener.InitializationListener
+com.neo4j.sync.auto.AutoStartExtensionFactory
