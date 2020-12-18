@@ -7,6 +7,7 @@ import org.neo4j.graphdb.*;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import scala.util.parsing.json.JSON;
 
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,15 @@ public class GraphWriter {
         // split the transactionEvents JSON into a list of separate events
 
         this.transactionEvents = TransactionDataParser.getTransactionEvents(graphTransaction);
+        this.graphDb = (GraphDatabaseAPI) graphDb;
+        this.log = log;
+    }
+
+    public GraphWriter(String graphTransaction, GraphDatabaseService graphDb, Log log) throws JSONException {
+
+        // split the transactionEvents JSON into a list of separate events
+
+        this.transactionEvents = TransactionDataParser.getTransactionEvents(new JSONObject(graphTransaction));
         this.graphDb = (GraphDatabaseAPI) graphDb;
         this.log = log;
     }

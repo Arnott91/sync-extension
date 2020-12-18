@@ -27,7 +27,7 @@ public class StartAndStopReplicationProcedures {
         if (replicationEngine == null) {
             Driver driver = GraphDatabase.driver( remoteDatabaseURI, AuthTokens.basic( username, password ) );
             driver.verifyConnectivity();
-            this.replicationEngine = new ReplicationEngine( driver, gds );
+            this.replicationEngine = new ReplicationEngine( driver, gds, log);
         }
         this.replicationEngine.start();
         log.info("Replication from %s started.", remoteDatabaseURI);
