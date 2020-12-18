@@ -205,7 +205,7 @@ public class TranslatorTest {
             List<Map<String, JSONObject>> txEvents = TransactionDataParser.getTransactionEvents(graphTxTranslation);
             JSONObject propertyChangeEvent = txEvents.get(0).get("NodePropertyChange");
 
-           Map<String, String> changedProperties = TransactionDataParser.getChangedProperties(propertyChangeEvent);
+           Map<String, Object> changedProperties = TransactionDataParser.getChangedProperties(propertyChangeEvent);
 
             changedProperties.forEach((k,v)-> {
                 System.out.println(k);

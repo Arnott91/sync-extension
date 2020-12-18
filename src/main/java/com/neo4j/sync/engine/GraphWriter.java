@@ -22,6 +22,7 @@ public class GraphWriter {
     public static final String DELETE_RELATION = "DeleteRelation";
     public static final String ADD_RELATION_PROPERTY = "AddRelationProperty";
     public static final String REMOVE_RELATION_PROPERTY = "RemoveRelationProperty";
+    public static final String RELATIONSHIP_PROPERTY_CHANGE = "RelationPropertyChange";
     private final List<Map<String, JSONObject>> transactionEvents;
     private String changeType;
     private final GraphDatabaseAPI graphDb;
@@ -76,7 +77,10 @@ public class GraphWriter {
                         this.delegateCRUDOperation(v, ChangeType.ADD_RELATION_PROPERTY);
                         break;
                     case REMOVE_RELATION_PROPERTY:
+                    case RELATIONSHIP_PROPERTY_CHANGE:
                         this.delegateCRUDOperation(v, ChangeType.RELATION_PROPERTY_CHANGE);
+                        break;
+
 
                 }
 
@@ -123,7 +127,7 @@ public class GraphWriter {
 
         String[] startPrimaryKey = finder.getPrimaryKey(NodeDirection.START);
         String[] targetPrimaryKey = finder.getPrimaryKey(NodeDirection.TARGET);
-        Map<String, String> properties = TransactionDataParser.getChangedProperties(event);
+        Map<String, Object> properties = TransactionDataParser.getChangedProperties(event);
         String[] removedProperties = TransactionDataParser.getRemovedProperties(event);
 
 
@@ -170,7 +174,7 @@ public class GraphWriter {
         String[] startPrimaryKey = finder.getPrimaryKey(NodeDirection.START);
         String[] targetPrimaryKey = finder.getPrimaryKey(NodeDirection.TARGET);
 
-        Map<String, String> properties = TransactionDataParser.getRelationProperties(event);
+        Map<String,Object> properties = TransactionDataParser.getRelationProperties(event);
 
 
         try (Transaction tx = graphDb.beginTx()) {
@@ -200,7 +204,8 @@ public class GraphWriter {
         String[] startPrimaryKey = finder.getPrimaryKey(NodeDirection.START);
         String[] targetPrimaryKey = finder.getPrimaryKey(NodeDirection.TARGET);
 
-        Map<String, String> properties = TransactionDataParser.getRelationProperties(event);
+        //Map<String, String> properties = TransactionDataParser.getRelationProperties(event);
+        Map<String, Object> properties = TransactionDataParser.getRelationProperties(event);
 
 
         try (Transaction tx = graphDb.beginTx()) {
@@ -212,6 +217,8 @@ public class GraphWriter {
 
             Relationship relationshipFrom = startNode.createRelationshipTo(targetNode, RelationshipType.withName(TransactionDataParser.getRelationType(event)));
             if (properties.size() > 0) properties.forEach(relationshipFrom::setProperty);
+
+
 
 
             tx.commit();
@@ -273,7 +280,7 @@ public class GraphWriter {
         NodeFinder finder = new NodeFinder(event);
         Label searchLabel = finder.getSearchLabel();
         String[] primaryKey = finder.getPrimaryKey();
-        Map<String, String> changedProperties = TransactionDataParser.getChangedProperties(event);
+        Map<String, Object> changedProperties = TransactionDataParser.getChangedProperties(event);
         String[] removedPropertyKeys = TransactionDataParser.getRemovedProperties(event);
         // we need the primary key to find the node
 
@@ -284,10 +291,9 @@ public class GraphWriter {
                 foundNode.removeProperty(removedPropertyKey);
             }
 
-            for (Map.Entry<String, String> entry : changedProperties.entrySet()) {
-                String k = entry.getKey();
-                String v = entry.getValue();
-                foundNode.setProperty(k, v);
+            for (Map.Entry<String, Object> entry : changedProperties.entrySet()) {
+
+                foundNode.setProperty(entry.getKey(), entry.getValue());
             }
             tx.commit();
 
@@ -305,7 +311,7 @@ public class GraphWriter {
         String[] primaryKey = finder.getPrimaryKey();
 
         // get the collection of properties
-        Map<String, String> properties = TransactionDataParser.getNodeProperties(event);
+        Map<String, Object> properties = TransactionDataParser.getNodeProperties(event);
 
 
         try (Transaction tx = graphDb.beginTx()) {
@@ -323,9 +329,9 @@ public class GraphWriter {
     private void addNode(JSONObject event) throws JSONException {
 
         // get the array of labels
-        String[] labels = TransactionDataParser.getNodeLabels(event);
+        String[] labels = (String[]) TransactionDataParser.getNodeLabels(event);
         // get the collection of properties
-        Map<String, String> properties = TransactionDataParser.getNodeProperties(event);
+        Map<String,Object> properties = TransactionDataParser.getNodeProperties(event);
 
 
         try (Transaction tx = graphDb.beginTx()) {

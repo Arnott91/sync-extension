@@ -17,13 +17,13 @@ public class NodeFinder {
     }
 
     public String[] getPrimaryKey() throws JSONException {
-        Map<String, String> pk = TransactionDataParser.getPrimaryKey(event);
+        Map<String, Object> pk = TransactionDataParser.getPrimaryKey(event);
 
         String[] primaryKey = new String[2];
 
-        for (Map.Entry<String, String> entry : pk.entrySet()) {
-            primaryKey[0] = entry.getValue();
-            primaryKey[1] = entry.getValue();
+        for (Map.Entry<String, Object> entry : pk.entrySet()) {
+            primaryKey[0] = entry.getValue().toString();
+            primaryKey[1] = entry.getValue().toString();
 
 
         }
@@ -31,13 +31,13 @@ public class NodeFinder {
     }
 
     public String[] getPrimaryKey(NodeDirection direction) throws JSONException {
-        Map<String, String> pk = TransactionDataParser.getPrimaryKey(event, direction);
+        Map<String, Object> pk = TransactionDataParser.getPrimaryKey(event, direction);
 
         String[] primaryKey = new String[2];
 
-        for (Map.Entry<String, String> entry : pk.entrySet()) {
+        for (Map.Entry<String, Object> entry : pk.entrySet()) {
             primaryKey[0] = entry.getKey();
-            primaryKey[1] = entry.getValue();
+            primaryKey[1] = entry.getValue().toString();
 
 
         }
