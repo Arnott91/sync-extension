@@ -1,7 +1,7 @@
-package com.neo4j.sync.auto;
+package com.neo4j.sync.start;
 
 import org.neo4j.annotations.service.ServiceProvider;
-import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.ExtensionType;
@@ -10,21 +10,21 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.internal.LogService;
 
 @ServiceProvider
-public class AutoStartExtensionFactory extends ExtensionFactory<AutoStartExtensionFactory.Dependencies> {
+public class StartupExtensionFactory extends ExtensionFactory<StartupExtensionFactory.Dependencies> {
 
-    public AutoStartExtensionFactory() {
+    public StartupExtensionFactory() {
         super(ExtensionType.DATABASE, "AutoStartExtensionFactory");
     }
 
     @Override
     public Lifecycle newInstance(ExtensionContext extensionContext, Dependencies dependencies) {
         dependencies.log().getUserLog(this.getClass()).info("AutoStartExtensionFactory#newInstance");
-        return new AutoStart(dependencies);
+        return new Startup(dependencies);
     }
 
     public interface Dependencies {
         AvailabilityGuard getAvailabilityGuard();
-
+        DatabaseManagementService getDatabaseManagementService();
         LogService log();
     }
 }

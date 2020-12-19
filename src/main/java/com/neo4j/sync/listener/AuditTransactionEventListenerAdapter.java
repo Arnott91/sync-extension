@@ -1,5 +1,6 @@
 package com.neo4j.sync.listener;
 
+import com.neo4j.sync.start.Startup;
 import com.neo4j.sync.engine.TransactionFileLogger;
 import com.neo4j.sync.engine.TransactionRecord;
 import com.neo4j.sync.engine.TransactionRecorder;
@@ -27,12 +28,15 @@ import org.neo4j.logging.LogProvider;
  */
 public class AuditTransactionEventListenerAdapter implements TransactionEventListener<Node> {
 
-    private String beforeCommitTxId;
+    public static final String INTEGRATION_DATABASE = "INTEGRATION.DATABASE";
+
     private final String TX_RECORD_LABEL = "com.neo4j.sync.engine.TransactionRecord";
     private final String TX_RECORD_NODE_BEFORE_COMMIT_KEY = "transactionUUID";
     private final String TX_RECORD_STATUS_KEY = "status";
     private final String TX_RECORD_TX_DATA_KEY = "transactionData";
     private final String TX_RECORD_CREATE_TIME_KEY = "timeCreated";
+
+    private String beforeCommitTxId;
     private long transactionTimestamp;
     private String txData;
     private boolean logTransaction = false;
@@ -40,7 +44,7 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
 
 
     @Override
-    public Node beforeCommit(TransactionData data, Transaction transaction, GraphDatabaseService databaseService)
+    public Node beforeCommit(TransactionData data, Transaction transaction, GraphDatabaseService sourceDatabase)
             throws Exception {
 
         // ge a handle to the transaction recorder.  This will grab information from the Transaction Data object
@@ -67,7 +71,9 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
             // Populate the TransactionRecord node with required transaction replay and history
             // data and write locally.
 
-            try (Transaction tx = databaseService.beginTx()) {
+            // TODO: this is wrong. We need to get a handle to the destination database.
+            GraphDatabaseService destinationDatbase = Startup.getDatabase(INTEGRATION_DATABASE);
+            try (Transaction tx = destinationDatbase.beginTx()) {
                 Node txRecordNode = tx.createNode(Label.label(TX_RECORD_LABEL));
                 txRecordNode.setProperty(TX_RECORD_STATUS_KEY, txRecord.getStatus());
                 txRecordNode.setProperty(TX_RECORD_CREATE_TIME_KEY, txRecord.getTimestampCreated());
@@ -75,7 +81,7 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
                 txRecordNode.setProperty(TX_RECORD_TX_DATA_KEY, txRecord.getTransactionData());
                 tx.commit();
             } catch (Exception e) {
-                getLog(databaseService).error(e.getMessage(), e);
+                getLog(sourceDatabase).error(e.getMessage(), e);
             } finally {
                 logTransaction = true;
             }
@@ -91,7 +97,7 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
     }
 
     @Override
-    public void afterCommit(TransactionData data, Node startNode, GraphDatabaseService databaseService) {
+    public void afterCommit(TransactionData data, Node startNode, GraphDatabaseService sourceDatabase) {
         // log our committed transactions to the transaction log.
         // we can then compare any written nodes in the transaction log that also exist in the rollback logs.
 
@@ -99,9 +105,9 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
             try {
                 TransactionFileLogger.AppendTransactionLog(txData, beforeCommitTxId, data.getTransactionId(),
                         transactionTimestamp,
-                        getLog(databaseService));
+                        getLog(sourceDatabase));
             } catch (Exception e) {
-                getLog(databaseService).error(e.getMessage(), e);
+                getLog(sourceDatabase).error(e.getMessage(), e);
             } finally {
                 logTransaction = false;
             }
@@ -109,16 +115,16 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
     }
 
     @Override
-    public void afterRollback(TransactionData data, Node startNode, GraphDatabaseService databaseService) {
+    public void afterRollback(TransactionData data, Node startNode, GraphDatabaseService sourceDatabase) {
         // identify transactions that have rolled backed with their transaction UUID values so that we can
         // compare to the transaction log and look for written transaction recrods that were rolled back.
 
         if (replicate) {
             try {
-                TransactionFileLogger.AppendRollbackTransactionLog(this.beforeCommitTxId, this.transactionTimestamp, getLog(databaseService));
+                TransactionFileLogger.AppendRollbackTransactionLog(this.beforeCommitTxId, this.transactionTimestamp, getLog(sourceDatabase));
             } catch (Exception e) {
                 // log exception
-                getLog(databaseService).error(e.getMessage(), e);
+                getLog(sourceDatabase).error(e.getMessage(), e);
             }
         }
     }

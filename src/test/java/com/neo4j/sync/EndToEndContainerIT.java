@@ -105,9 +105,8 @@ public class EndToEndContainerIT {
     @Test
     public void shouldStartAndStopReplicationOnBothClusters() {
 
-        try (
-                Driver coreDriver = GraphDatabase.driver(clusterOne.getURI(), authToken);
-                Session session = coreDriver.session(sessionConfigOne)) {
+        try (Driver coreDriver = GraphDatabase.driver(clusterOne.getURI(), authToken);
+             Session session = coreDriver.session(sessionConfigOne)) {
 
             session.run(format("CALL startReplication('%s', '%s', '%s')", clusterTwoInternalAddress, "neo4j", "password")).consume();
 
@@ -121,9 +120,8 @@ public class EndToEndContainerIT {
             assertThat(statuses).containsOnly("stopped");
         }
 
-        try (
-                Driver coreDriver = GraphDatabase.driver(clusterTwo.getURI(), authToken);
-                Session session = coreDriver.session(sessionConfigTwo)) {
+        try (Driver coreDriver = GraphDatabase.driver(clusterTwo.getURI(), authToken);
+             Session session = coreDriver.session(sessionConfigTwo)) {
 
             session.run(format("CALL startReplication('%s', '%s', '%s')", clusterOneInternalAddress, "neo4j", "password"));
 
