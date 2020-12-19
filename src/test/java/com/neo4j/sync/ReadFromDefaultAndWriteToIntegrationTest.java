@@ -48,10 +48,10 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
 
         // Don't need the listener on the sink cluster for this test
         sourceCluster.awaitLeader().managementService().createDatabase(INTEGRATION_DATABASE);
-        DatabaseIsReadyListener databaseEventListener = new DatabaseIsReadyListener();
-        sourceCluster.awaitLeader().managementService().registerDatabaseEventListener(databaseEventListener);
+        DatabaseIsReadyListener integrationDatabaseListener = new DatabaseIsReadyListener();
+        sourceCluster.awaitLeader().managementService().registerDatabaseEventListener(integrationDatabaseListener);
         sourceCluster.awaitLeader().managementService().startDatabase(INTEGRATION_DATABASE);
-        databaseEventListener.waitUntilReady();
+        integrationDatabaseListener.waitUntilReady();
     }
 
     @Test
