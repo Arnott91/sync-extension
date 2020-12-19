@@ -42,7 +42,6 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
     private boolean logTransaction = false;
     private boolean replicate = false;
 
-
     @Override
     public Node beforeCommit(TransactionData data, Transaction transaction, GraphDatabaseService sourceDatabase)
             throws Exception {
@@ -71,9 +70,8 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
             // Populate the TransactionRecord node with required transaction replay and history
             // data and write locally.
 
-            // TODO: this is wrong. We need to get a handle to the destination database.
-            GraphDatabaseService destinationDatabase = Startup.getDatabase(INTEGRATION_DATABASE);
-            try (Transaction tx = destinationDatabase.beginTx()) {
+            GraphDatabaseService destinationDatbase = Startup.getDatabase(INTEGRATION_DATABASE);
+            try (Transaction tx = destinationDatbase.beginTx()) {
                 Node txRecordNode = tx.createNode(Label.label(TX_RECORD_LABEL));
                 txRecordNode.setProperty(TX_RECORD_STATUS_KEY, txRecord.getStatus());
                 txRecordNode.setProperty(TX_RECORD_CREATE_TIME_KEY, txRecord.getTimestampCreated());

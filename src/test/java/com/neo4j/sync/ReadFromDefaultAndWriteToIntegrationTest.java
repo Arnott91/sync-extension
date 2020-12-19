@@ -18,7 +18,7 @@ import org.neo4j.test.extension.Inject;
 import java.net.URI;
 
 import static com.neo4j.sync.listener.AuditTransactionEventListenerAdapter.INTEGRATION_DATABASE;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.driver.GraphDatabase.driver;
 
@@ -56,13 +56,13 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
 
     @Test
     public void listenerShouldListenToDefaultAndWriteToIntegration() throws Exception {
-        try (Driver driver = driver(new URI("neo4j://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
+        try (Driver driver = driver(new URI("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
 
             Session session = driver.session(SessionConfig.builder().withDatabase(DEFAULT_DATABASE_NAME).build());
             session.run(("CREATE (:Person {name:'Rosa'})-[:FOLLOWS]->(:Person {name:'Karl'})"));
         }
 
-        try (Driver driver = driver(new URI("neo4j://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
+        try (Driver driver = driver(new URI("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
 
             Session session = driver.session(SessionConfig.builder().withDatabase(INTEGRATION_DATABASE).build());
             Result result = session.run("MATCH (tr) RETURN tr");
