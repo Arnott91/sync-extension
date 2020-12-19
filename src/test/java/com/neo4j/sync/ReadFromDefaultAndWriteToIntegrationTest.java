@@ -65,7 +65,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
         try (Driver driver = driver(new URI("neo4j://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
 
             Session session = driver.session(SessionConfig.builder().withDatabase(INTEGRATION_DATABASE).build());
-            Result result = session.run(("MATCH p=(:Person {name:'Rosa'})-[:FOLLOWS]->(:Person {name:'Karl'}) RETURN p"));
+            Result result = session.run("MATCH (tr) RETURN tr");
             assertEquals(1, result.list().size());
         }
     }
@@ -81,7 +81,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
         public void waitUntilReady() {
             while (!ready) {
                 try {
-                    Thread.sleep(100);
+                    Thread.sleep(500);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }

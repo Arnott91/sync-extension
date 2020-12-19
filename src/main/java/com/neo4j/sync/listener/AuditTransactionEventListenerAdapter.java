@@ -30,7 +30,7 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
 
     public static final String INTEGRATION_DATABASE = "INTEGRATION.DATABASE";
 
-    private final String TX_RECORD_LABEL = "com.neo4j.sync.engine.TransactionRecord";
+    private final String TX_RECORD_LABEL = "TransactionRecord";
     private final String TX_RECORD_NODE_BEFORE_COMMIT_KEY = "transactionUUID";
     private final String TX_RECORD_STATUS_KEY = "status";
     private final String TX_RECORD_TX_DATA_KEY = "transactionData";
@@ -72,8 +72,8 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
             // data and write locally.
 
             // TODO: this is wrong. We need to get a handle to the destination database.
-            GraphDatabaseService destinationDatbase = Startup.getDatabase(INTEGRATION_DATABASE);
-            try (Transaction tx = destinationDatbase.beginTx()) {
+            GraphDatabaseService destinationDatabase = Startup.getDatabase(INTEGRATION_DATABASE);
+            try (Transaction tx = destinationDatabase.beginTx()) {
                 Node txRecordNode = tx.createNode(Label.label(TX_RECORD_LABEL));
                 txRecordNode.setProperty(TX_RECORD_STATUS_KEY, txRecord.getStatus());
                 txRecordNode.setProperty(TX_RECORD_CREATE_TIME_KEY, txRecord.getTimestampCreated());
