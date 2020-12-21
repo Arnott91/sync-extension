@@ -1,9 +1,9 @@
 package com.neo4j.sync.listener;
 
-import com.neo4j.sync.start.Startup;
 import com.neo4j.sync.engine.TransactionFileLogger;
 import com.neo4j.sync.engine.TransactionRecord;
 import com.neo4j.sync.engine.TransactionRecorder;
+import com.neo4j.sync.start.Startup;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -13,6 +13,9 @@ import org.neo4j.graphdb.event.TransactionEventListener;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Protocol is as follows.
@@ -27,7 +30,6 @@ import org.neo4j.logging.LogProvider;
  * @author Jim Webber
  */
 public class AuditTransactionEventListenerAdapter implements TransactionEventListener<Node> {
-
     public static final String INTEGRATION_DATABASE = "INTEGRATION.DATABASE";
 
     private final String TX_RECORD_LABEL = "TransactionRecord";
@@ -42,9 +44,12 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
     private boolean logTransaction = false;
     private boolean replicate = false;
 
+    private ExecutorService executorService = Executors.newSingleThreadExecutor();
+
     @Override
     public Node beforeCommit(TransactionData data, Transaction transaction, GraphDatabaseService sourceDatabase)
             throws Exception {
+
 
         // ge a handle to the transaction recorder.  This will grab information from the Transaction Data object
         // and populate a transaction record that we can use to both write a TransactionRecord node to the
@@ -69,20 +74,21 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
 
             // Populate the TransactionRecord node with required transaction replay and history
             // data and write locally.
-
-            GraphDatabaseService destinationDatbase = Startup.getDatabase(INTEGRATION_DATABASE);
-            try (Transaction tx = destinationDatbase.beginTx()) {
-                Node txRecordNode = tx.createNode(Label.label(TX_RECORD_LABEL));
-                txRecordNode.setProperty(TX_RECORD_STATUS_KEY, txRecord.getStatus());
-                txRecordNode.setProperty(TX_RECORD_CREATE_TIME_KEY, txRecord.getTimestampCreated());
-                txRecordNode.setProperty(TX_RECORD_NODE_BEFORE_COMMIT_KEY, txRecord.getTransactionUUID());
-                txRecordNode.setProperty(TX_RECORD_TX_DATA_KEY, txRecord.getTransactionData());
-                tx.commit();
-            } catch (Exception e) {
-                getLog(sourceDatabase).error(e.getMessage(), e);
-            } finally {
-                logTransaction = true;
-            }
+            executorService.submit(() -> {
+                GraphDatabaseService destinationDatbase = Startup.getDatabase(INTEGRATION_DATABASE);
+                try (Transaction tx = destinationDatbase.beginTx()) {
+                    Node txRecordNode = tx.createNode(Label.label(TX_RECORD_LABEL));
+                    txRecordNode.setProperty(TX_RECORD_STATUS_KEY, txRecord.getStatus());
+                    txRecordNode.setProperty(TX_RECORD_CREATE_TIME_KEY, txRecord.getTimestampCreated());
+                    txRecordNode.setProperty(TX_RECORD_NODE_BEFORE_COMMIT_KEY, txRecord.getTransactionUUID());
+                    txRecordNode.setProperty(TX_RECORD_TX_DATA_KEY, txRecord.getTransactionData());
+                    tx.commit();
+                } catch (Exception e) {
+                    getLog(sourceDatabase).error(e.getMessage(), e);
+                } finally {
+                    logTransaction = true;
+                }
+            });
         }
 
         // I tried returning the txRecordNode in the above try - catch statement and I didn't get a handle
