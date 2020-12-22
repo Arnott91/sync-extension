@@ -2,22 +2,17 @@ package com.neo4j.sync;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.sync.engine.GraphWriter;
-import com.neo4j.sync.engine.TransactionDataParser;
 import com.neo4j.sync.engine.TransactionHistoryManager;
 import com.neo4j.sync.listener.AuditTransactionEventListenerAdapter;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.*;
-import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
-import org.neo4j.configuration.Internal;
-import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
+import org.neo4j.driver.*;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.event.DatabaseEventContext;
 import org.neo4j.graphdb.event.DatabaseEventListenerAdapter;
@@ -26,15 +21,13 @@ import org.neo4j.logging.Log;
 import org.neo4j.test.extension.Inject;
 
 import java.net.URI;
-import java.sql.Timestamp;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.driver.GraphDatabase.driver;
-
-import org.codehaus.jettison.json.JSONObject;
 
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
 @ClusterExtension
@@ -73,8 +66,8 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
         }
 
         // Don't need the listener on the sink cluster for this test
-       // sourceCluster.awaitLeader().managementService().createDatabase(INTEGRATION_DATABASE);
-       // DatabaseIsReadyListener integrationDatabaseListener = new DatabaseIsReadyListener();
+        // sourceCluster.awaitLeader().managementService().createDatabase(INTEGRATION_DATABASE);
+        // DatabaseIsReadyListener integrationDatabaseListener = new DatabaseIsReadyListener();
         //sourceCluster.awaitLeader().managementService().registerDatabaseEventListener(integrationDatabaseListener);
         //sourceCluster.awaitLeader().managementService().startDatabase(INTEGRATION_DATABASE);
         //integrationDatabaseListener.waitUntilReady();
@@ -130,7 +123,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             Value transactionData = record.get("data");
             System.out.println(transactionData);
 
-            CoreClusterMember leader = targetCluster.getMemberWithAnyRole(Role.LEADER);
+            CoreClusterMember leader = targetCluster.awaitLeader();
             GraphDatabaseFacade defaultDB = leader.defaultDatabase();
 
 
@@ -138,7 +131,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             graphWriter.executeCRUDOperation();
 
             org.neo4j.graphdb.Transaction tx = defaultDB.beginTx();
-            Iterable<Node> newNodes  = () -> tx.findNodes(Label.label("Person"));
+            Iterable<Node> newNodes = () -> tx.findNodes(Label.label("Person"));
             Assertions.assertTrue(newNodes.iterator().hasNext());
             newNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("Person"))));
             newNodes.forEach(node -> assertTrue(node.hasProperty("uuid")));
@@ -180,7 +173,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             Value transactionData = record.get("data");
             System.out.println(transactionData);
 
-            CoreClusterMember leader = targetCluster.getMemberWithAnyRole(Role.LEADER);
+            CoreClusterMember leader = targetCluster.awaitLeader();
             GraphDatabaseFacade defaultDB = leader.defaultDatabase();
 
 
@@ -199,13 +192,13 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             deviceNodes.forEach(node -> assertTrue(node.hasProperty("TimestampModified")));
             deviceNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("Device"))));
 
-            deviceNodes.forEach(node -> assertEquals("usfix-rtr1.federos.com",node.getProperty("Name")));
-            deviceNodes.forEach(node -> assertEquals("usfix-rtr1.federos.com",node.getProperty("DNSName")));
-            deviceNodes.forEach(node -> assertEquals(1,node.getProperty("ZoneID")));
-            deviceNodes.forEach(node -> assertEquals(1,node.getProperty("DeviceID")));
+            deviceNodes.forEach(node -> assertEquals("usfix-rtr1.federos.com", node.getProperty("Name")));
+            deviceNodes.forEach(node -> assertEquals("usfix-rtr1.federos.com", node.getProperty("DNSName")));
+            deviceNodes.forEach(node -> assertEquals(1, node.getProperty("ZoneID")));
+            deviceNodes.forEach(node -> assertEquals(1, node.getProperty("DeviceID")));
 
             deviceNodes.forEach(node -> assertTrue(node.hasRelationship(RelationshipType.withName("HasInterface"))));
-            deviceNodes.forEach(node -> assertTrue(node.getSingleRelationship(RelationshipType.withName("HasInterface"),Direction.OUTGOING).hasProperty("uuid")));
+            deviceNodes.forEach(node -> assertTrue(node.getSingleRelationship(RelationshipType.withName("HasInterface"), Direction.OUTGOING).hasProperty("uuid")));
 
 
             Iterable<Node> interfaceNodes = () -> tx.findNodes(Label.label("Interface"));
@@ -218,11 +211,11 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             interfaceNodes.forEach(node -> assertTrue(node.hasProperty("CustomName")));
             interfaceNodes.forEach(node -> assertTrue(node.hasProperty("IPAddress")));
 
-            interfaceNodes.forEach(node -> assertEquals("usfix-rtr1.federos.com:GigabitEthernet0/0",node.getProperty("Name")));
-            interfaceNodes.forEach(node -> assertEquals("usfix-rtr1.federos.com",node.getProperty("DeviceName")));
-            interfaceNodes.forEach(node -> assertEquals(1,node.getProperty("ZoneID")));
-            interfaceNodes.forEach(node -> assertEquals("GigabitEthernet0/0",node.getProperty("CustomName")));
-            interfaceNodes.forEach(node -> assertEquals("192.0.2.1",node.getProperty("IPAddress")));
+            interfaceNodes.forEach(node -> assertEquals("usfix-rtr1.federos.com:GigabitEthernet0/0", node.getProperty("Name")));
+            interfaceNodes.forEach(node -> assertEquals("usfix-rtr1.federos.com", node.getProperty("DeviceName")));
+            interfaceNodes.forEach(node -> assertEquals(1, node.getProperty("ZoneID")));
+            interfaceNodes.forEach(node -> assertEquals("GigabitEthernet0/0", node.getProperty("CustomName")));
+            interfaceNodes.forEach(node -> assertEquals("192.0.2.1", node.getProperty("IPAddress")));
             interfaceNodes.forEach(node -> assertTrue(node.hasRelationship(RelationshipType.withName("HasInterface"))));
 
 
@@ -265,7 +258,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             Value transactionData = record.get("data");
             System.out.println(transactionData);
 
-            CoreClusterMember leader = targetCluster.getMemberWithAnyRole(Role.LEADER);
+            CoreClusterMember leader = targetCluster.awaitLeader();
             GraphDatabaseFacade defaultDB = leader.defaultDatabase();
 
 
@@ -284,13 +277,13 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             deviceNodes.forEach(node -> assertTrue(node.hasProperty("TimestampModified")));
             deviceNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("Device"))));
 
-            deviceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com",node.getProperty("Name")));
-            deviceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com",node.getProperty("DNSName")));
-            deviceNodes.forEach(node -> assertEquals(1,node.getProperty("ZoneID")));
-            deviceNodes.forEach(node -> assertEquals(1,node.getProperty("DeviceID")));
+            deviceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com", node.getProperty("Name")));
+            deviceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com", node.getProperty("DNSName")));
+            deviceNodes.forEach(node -> assertEquals(1, node.getProperty("ZoneID")));
+            deviceNodes.forEach(node -> assertEquals(1, node.getProperty("DeviceID")));
 
             deviceNodes.forEach(node -> assertTrue(node.hasRelationship(RelationshipType.withName("HasInterface"))));
-            deviceNodes.forEach(node -> assertTrue(node.getSingleRelationship(RelationshipType.withName("HasInterface"),Direction.OUTGOING).hasProperty("uuid")));
+            deviceNodes.forEach(node -> assertTrue(node.getSingleRelationship(RelationshipType.withName("HasInterface"), Direction.OUTGOING).hasProperty("uuid")));
 
 
             Iterable<Node> interfaceNodes = () -> tx.findNodes(Label.label("Interface"));
@@ -303,11 +296,11 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             interfaceNodes.forEach(node -> assertTrue(node.hasProperty("CustomName")));
             interfaceNodes.forEach(node -> assertTrue(node.hasProperty("IPAddress")));
 
-            interfaceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com:GigabitEthernet0/0",node.getProperty("Name")));
-            interfaceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com",node.getProperty("DeviceName")));
-            interfaceNodes.forEach(node -> assertEquals(1,node.getProperty("ZoneID")));
-            interfaceNodes.forEach(node -> assertEquals("GigabitEthernet0/0",node.getProperty("CustomName")));
-            interfaceNodes.forEach(node -> assertEquals("192.0.2.2",node.getProperty("IPAddress")));
+            interfaceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com:GigabitEthernet0/0", node.getProperty("Name")));
+            interfaceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com", node.getProperty("DeviceName")));
+            interfaceNodes.forEach(node -> assertEquals(1, node.getProperty("ZoneID")));
+            interfaceNodes.forEach(node -> assertEquals("GigabitEthernet0/0", node.getProperty("CustomName")));
+            interfaceNodes.forEach(node -> assertEquals("192.0.2.2", node.getProperty("IPAddress")));
             interfaceNodes.forEach(node -> assertTrue(node.hasRelationship(RelationshipType.withName("HasInterface"))));
 
             assertTrue(tx.findNodes(Label.label("LocalTx")).hasNext());
@@ -323,7 +316,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
     @Test
     public void listenerShouldListenToDefaultAndWriteToIntegration5() throws Exception {
 
-         String federosQuery1 = "WITH timestamp() AS tm\n" +
+        String federosQuery1 = "WITH timestamp() AS tm\n" +
                 "        MERGE (v1:Device {Name: 'usfix-rtr2.federos.com', ZoneID: 1})\n" +
                 "ON CREATE SET v1 += {DNSName: \"usfix-rtr2.federos.com\", DeviceID: 1, TimestampModified: tm, uuid: randomUUID()}\n" +
                 "ON MATCH SET v1 += {DNSName: \"usfix-rtr2.federos.com\", DeviceID: 1, TimestampModified: tm}\n" +
@@ -334,10 +327,10 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
                 "ON CREATE SET e += {TimestampModified: tm, uuid: randomUUID()}\n" +
                 "ON MATCH SET e += {TimestampModified: tm} RETURN COUNT(*) as written;";
 
-         String replicationPollingQuery = "MATCH (tr:TransactionRecord) WHERE tr.timeCreated > %d " +
-                 "RETURN tr.transactionData as data, tr.timeCreated as time";
+        String replicationPollingQuery = "MATCH (tr:TransactionRecord) WHERE tr.timeCreated > %d " +
+                "RETURN tr.transactionData as data, tr.timeCreated as time";
 
-        CoreClusterMember leader = targetCluster.getMemberWithAnyRole(Role.LEADER);
+        CoreClusterMember leader = targetCluster.awaitLeader();
         GraphDatabaseFacade defaultDB = leader.defaultDatabase();
 
         long lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(defaultDB);
@@ -353,7 +346,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
         try (Driver driver = driver(new URI("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
 
             Session session = driver.session(SessionConfig.builder().withDatabase(DEFAULT_DATABASE_NAME).build());
-            Result result = session.run(String.format(replicationPollingQuery,lastTransactionTimestamp));
+            Result result = session.run(String.format(replicationPollingQuery, lastTransactionTimestamp));
             Record record = result.single();
             Value transactionData = record.get("data");
             Value transactionTime = record.get("time");
@@ -363,8 +356,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             graphWriter.executeCRUDOperation();
 
 
-
-            TransactionHistoryManager.setLastReplicationTimestamp(defaultDB,transactionTime.asLong());
+            TransactionHistoryManager.setLastReplicationTimestamp(defaultDB, transactionTime.asLong());
 
 
             org.neo4j.graphdb.Transaction tx = defaultDB.beginTx();
@@ -379,13 +371,13 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             deviceNodes.forEach(node -> assertTrue(node.hasProperty("TimestampModified")));
             deviceNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("Device"))));
 
-            deviceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com",node.getProperty("Name")));
-            deviceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com",node.getProperty("DNSName")));
-            deviceNodes.forEach(node -> assertEquals(1,node.getProperty("ZoneID")));
-            deviceNodes.forEach(node -> assertEquals(1,node.getProperty("DeviceID")));
+            deviceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com", node.getProperty("Name")));
+            deviceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com", node.getProperty("DNSName")));
+            deviceNodes.forEach(node -> assertEquals(1, node.getProperty("ZoneID")));
+            deviceNodes.forEach(node -> assertEquals(1, node.getProperty("DeviceID")));
 
             deviceNodes.forEach(node -> assertTrue(node.hasRelationship(RelationshipType.withName("HasInterface"))));
-            deviceNodes.forEach(node -> assertTrue(node.getSingleRelationship(RelationshipType.withName("HasInterface"),Direction.OUTGOING).hasProperty("uuid")));
+            deviceNodes.forEach(node -> assertTrue(node.getSingleRelationship(RelationshipType.withName("HasInterface"), Direction.OUTGOING).hasProperty("uuid")));
 
 
             Iterable<Node> interfaceNodes = () -> tx.findNodes(Label.label("Interface"));
@@ -398,11 +390,11 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             interfaceNodes.forEach(node -> assertTrue(node.hasProperty("CustomName")));
             interfaceNodes.forEach(node -> assertTrue(node.hasProperty("IPAddress")));
 
-            interfaceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com:GigabitEthernet0/0",node.getProperty("Name")));
-            interfaceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com",node.getProperty("DeviceName")));
-            interfaceNodes.forEach(node -> assertEquals(1,node.getProperty("ZoneID")));
-            interfaceNodes.forEach(node -> assertEquals("GigabitEthernet0/0",node.getProperty("CustomName")));
-            interfaceNodes.forEach(node -> assertEquals("192.0.2.2",node.getProperty("IPAddress")));
+            interfaceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com:GigabitEthernet0/0", node.getProperty("Name")));
+            interfaceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com", node.getProperty("DeviceName")));
+            interfaceNodes.forEach(node -> assertEquals(1, node.getProperty("ZoneID")));
+            interfaceNodes.forEach(node -> assertEquals("GigabitEthernet0/0", node.getProperty("CustomName")));
+            interfaceNodes.forEach(node -> assertEquals("192.0.2.2", node.getProperty("IPAddress")));
             interfaceNodes.forEach(node -> assertTrue(node.hasRelationship(RelationshipType.withName("HasInterface"))));
 
             Iterable<Node> lastTransactionReplicatedNodes = () -> tx.findNodes(Label.label("LastTransactionReplicated"));
@@ -410,18 +402,11 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             lastTransactionReplicatedNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("LastTransactionReplicated"))));
             lastTransactionReplicatedNodes.forEach(node -> assertTrue(node.hasProperty("id")));
             lastTransactionReplicatedNodes.forEach(node -> assertTrue(node.hasProperty("lastTimeRecorded")));
-            lastTransactionReplicatedNodes.forEach(node -> assertEquals("SINGLETON",node.getProperty("id")));
-            lastTransactionReplicatedNodes.forEach(node -> assertEquals(transactionTime.asLong(),node.getProperty("lastTimeRecorded")));
+            lastTransactionReplicatedNodes.forEach(node -> assertEquals("SINGLETON", node.getProperty("id")));
+            lastTransactionReplicatedNodes.forEach(node -> assertEquals(transactionTime.asLong(), node.getProperty("lastTimeRecorded")));
 
 
             tx.commit();
-
-
-
-
-
-
-
         }
     }
 
@@ -441,9 +426,9 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
 
         String federosQuery2 =
                 "MATCH (v1:Device {Name: 'usfix-rtr2.federos.com', ZoneID: 1}) " +
-                "MATCH (v2:Interface {Name: 'usfix-rtr2.federos.com:GigabitEthernet0/0', DeviceName: 'usfix-rtr2.federos.com', ZoneID: 1}) " +
-                "MATCH (v1)-[e:HasInterface]->(v2) " +
-                "RETURN COUNT(*) as read;";
+                        "MATCH (v2:Interface {Name: 'usfix-rtr2.federos.com:GigabitEthernet0/0', DeviceName: 'usfix-rtr2.federos.com', ZoneID: 1}) " +
+                        "MATCH (v1)-[e:HasInterface]->(v2) " +
+                        "RETURN COUNT(*) as read;";
 
         String federosQuery3 =
                 "MATCH (v1:Device) RETURN COUNT(v1) as read";
@@ -454,8 +439,8 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
         String transactionRecordQuery = "MATCH (tr:TransactionRecord) " +
                 "RETURN count(tr) as txRecords";
 
-        CoreClusterMember leader = targetCluster.getMemberWithAnyRole(Role.LEADER);
-        GraphDatabaseService defaultDB =  leader.managementService().database(DEFAULT_DATABASE_NAME);
+        CoreClusterMember leader = targetCluster.awaitLeader();
+        GraphDatabaseService defaultDB = leader.managementService().database(DEFAULT_DATABASE_NAME);
 
 
         // grab the timestamp from the last transaction replicated to this cluster.
@@ -479,7 +464,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             // run the query that polls the source server for transactions that have a timestamp
             // greater than the timestamp of the last replicated transaction.
             // in this case we only have one.  In reality there could be many.
-            Result result = session.run(String.format(replicationPollingQuery,lastTransactionTimestamp));
+            Result result = session.run(String.format(replicationPollingQuery, lastTransactionTimestamp));
             Record record = result.single();
 
             // grab the transaction JSON data from the TransactionRecord node
@@ -488,7 +473,6 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             Value transactionTime = record.get("time");
             System.out.println(transactionData);
             System.out.println(transactionTime);
-
 
 
             // create a new GraphWriter instance.  This object knows how to breakdown a transaction message
@@ -502,7 +486,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             // let's record the timestamp from the TransactionRecord node locally
             // so we know when the last replica was written.
             // we can then use that timestamp to poll for changes that happen after that timestamp.
-            TransactionHistoryManager.setLastReplicationTimestamp(defaultDB,transactionTime.asLong());
+            TransactionHistoryManager.setLastReplicationTimestamp(defaultDB, transactionTime.asLong());
 
             // ensure that what the GraphWriter has written to the local database
             // mirrors what was written at the source database
@@ -518,13 +502,13 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             deviceNodes.forEach(node -> assertTrue(node.hasProperty("TimestampModified")));
             deviceNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("Device"))));
 
-            deviceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com",node.getProperty("Name")));
-            deviceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com",node.getProperty("DNSName")));
-            deviceNodes.forEach(node -> assertEquals(1,node.getProperty("ZoneID")));
-            deviceNodes.forEach(node -> assertEquals(1,node.getProperty("DeviceID")));
+            deviceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com", node.getProperty("Name")));
+            deviceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com", node.getProperty("DNSName")));
+            deviceNodes.forEach(node -> assertEquals(1, node.getProperty("ZoneID")));
+            deviceNodes.forEach(node -> assertEquals(1, node.getProperty("DeviceID")));
 
             deviceNodes.forEach(node -> assertTrue(node.hasRelationship(RelationshipType.withName("HasInterface"))));
-            deviceNodes.forEach(node -> assertTrue(node.getSingleRelationship(RelationshipType.withName("HasInterface"),Direction.OUTGOING).hasProperty("uuid")));
+            deviceNodes.forEach(node -> assertTrue(node.getSingleRelationship(RelationshipType.withName("HasInterface"), Direction.OUTGOING).hasProperty("uuid")));
 
 
             Iterable<Node> interfaceNodes = () -> tx.findNodes(Label.label("Interface"));
@@ -537,11 +521,11 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             interfaceNodes.forEach(node -> assertTrue(node.hasProperty("CustomName")));
             interfaceNodes.forEach(node -> assertTrue(node.hasProperty("IPAddress")));
 
-            interfaceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com:GigabitEthernet0/0",node.getProperty("Name")));
-            interfaceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com",node.getProperty("DeviceName")));
-            interfaceNodes.forEach(node -> assertEquals(1,node.getProperty("ZoneID")));
-            interfaceNodes.forEach(node -> assertEquals("GigabitEthernet0/0",node.getProperty("CustomName")));
-            interfaceNodes.forEach(node -> assertEquals("192.0.2.2",node.getProperty("IPAddress")));
+            interfaceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com:GigabitEthernet0/0", node.getProperty("Name")));
+            interfaceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com", node.getProperty("DeviceName")));
+            interfaceNodes.forEach(node -> assertEquals(1, node.getProperty("ZoneID")));
+            interfaceNodes.forEach(node -> assertEquals("GigabitEthernet0/0", node.getProperty("CustomName")));
+            interfaceNodes.forEach(node -> assertEquals("192.0.2.2", node.getProperty("IPAddress")));
             interfaceNodes.forEach(node -> assertTrue(node.hasRelationship(RelationshipType.withName("HasInterface"))));
             System.out.println(interfaceNodes.iterator().next().getProperty("uuid"));
 
@@ -553,8 +537,8 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             lastTransactionReplicatedNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("LastTransactionReplicated"))));
             lastTransactionReplicatedNodes.forEach(node -> assertTrue(node.hasProperty("id")));
             lastTransactionReplicatedNodes.forEach(node -> assertTrue(node.hasProperty("lastTimeRecorded")));
-            lastTransactionReplicatedNodes.forEach(node -> assertEquals("SINGLETON",node.getProperty("id")));
-            lastTransactionReplicatedNodes.forEach(node -> assertEquals(transactionTime.asLong(),node.getProperty("lastTimeRecorded")));
+            lastTransactionReplicatedNodes.forEach(node -> assertEquals("SINGLETON", node.getProperty("id")));
+            lastTransactionReplicatedNodes.forEach(node -> assertEquals(transactionTime.asLong(), node.getProperty("lastTimeRecorded")));
 
 //            org.neo4j.graphdb.Result queryResult = tx.execute(federosQuery2);
 //            assertTrue(queryResult.hasNext());
@@ -577,7 +561,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
 
             org.neo4j.graphdb.Result queryResult2 = tx.execute(transactionRecordQuery);
             assertTrue(queryResult2.hasNext());
-            assertEquals(0,(long) queryResult2.next().get("txRecords"));
+            assertEquals(0, (long) queryResult2.next().get("txRecords"));
 
             // hopefully we only see green checks!
 
@@ -585,11 +569,6 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
 
 
             System.out.println("Sanity check!  We've made it through the test");
-
-
-
-
-
 
 
         }
@@ -619,11 +598,10 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
                 "RETURN tr.transactionData as data, tr.timeCreated as time";
 
 
-
-        CoreClusterMember targetLeader = targetCluster.getMemberWithAnyRole(Role.LEADER);
+        CoreClusterMember targetLeader = targetCluster.awaitLeader();
         GraphDatabaseFacade targetDefaultDB = targetLeader.defaultDatabase();
 
-        CoreClusterMember sourceLeader = sourceCluster.getMemberWithAnyRole(Role.LEADER);
+        CoreClusterMember sourceLeader = sourceCluster.awaitLeader();
         GraphDatabaseFacade sourceDefaultDB = sourceLeader.defaultDatabase();
 
         // grab the timestamp from the last transaction replicated to this cluster.
@@ -647,7 +625,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             // run the query that polls the source server for transactions that have a timestamp
             // greater than the timestamp of the last replicated transaction.
             // in this case we only have one.  In reality there could be many.
-            Result result = session.run(String.format(replicationPollingQuery,lastTransactionTimestamp));
+            Result result = session.run(String.format(replicationPollingQuery, lastTransactionTimestamp));
             Record record = result.single();
 
             // grab the transaction JSON data from the TransactionRecord node
@@ -667,8 +645,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             // let's record the timestamp from the TransactionRecord node locally
             // so we know when the last replica was written.
             // we can then use that timestamp to poll for changes that happen after that timestamp.
-            TransactionHistoryManager.setLastReplicationTimestamp(targetDefaultDB,transactionTime.asLong());
-
+            TransactionHistoryManager.setLastReplicationTimestamp(targetDefaultDB, transactionTime.asLong());
 
 
             // just for readability, we run a match statement that should succeed
@@ -678,23 +655,18 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             org.neo4j.graphdb.Transaction targetTx = targetDefaultDB.beginTx();
             org.neo4j.graphdb.Result targetQueryResult = targetTx.execute(queryThatShouldReturnAPathOnBoth);
             assertTrue(targetQueryResult.hasNext());
-            assertEquals(1,(long) targetQueryResult.next().get("read"));
+            assertEquals(1, (long) targetQueryResult.next().get("read"));
             targetTx.commit();
 
             // same query at source
             org.neo4j.graphdb.Transaction sourceTx = sourceDefaultDB.beginTx();
             org.neo4j.graphdb.Result sourceQueryResult = sourceTx.execute(queryThatShouldReturnAPathOnBoth);
             assertTrue(sourceQueryResult.hasNext());
-            assertEquals(1,(long) sourceQueryResult.next().get("read"));
+            assertEquals(1, (long) sourceQueryResult.next().get("read"));
             sourceTx.commit();
 
 
             System.out.println("Sanity check!  We've made it through the test");
-
-
-
-
-
 
 
         }
@@ -723,6 +695,4 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             }
         }
     }
-
-
 }
