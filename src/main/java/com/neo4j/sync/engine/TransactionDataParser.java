@@ -15,7 +15,7 @@ public class TransactionDataParser {
 
     public static final String NODE_PROPERTY_CHANGE = "NodePropertyChange";
     public static final String TARGET_PRIMARY_KEY = "targetPrimaryKey";
-    private static final String LOCAL_TRANSACTION_LABEL = "com.neo4j.sync.engine.LocalTx";
+    private static final String LOCAL_TRANSACTION_LABEL = "LocalTx";
     private static final String ADD_NODE_LABEL_KEY = "nodeLabels";
     private static final String TARGET_NODE_LABEL_KEY = "targetNodeLabels";
     public static final String ADD_NODE_PROPERTIES = "AddNodeProperties";

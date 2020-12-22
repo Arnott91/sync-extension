@@ -10,9 +10,9 @@ import java.util.Map;
 public class TransactionHistoryManager {
 
     public static final String LAST_TIME_RECORDED = "lastTimeRecorded";
-    private final static String LOCAL_TIMESTAMP_QUERY = "MATCH (ltr:LastTransactionReplicated {id:'SINGLETON'}) RETURN ltr.lastTimeRecorded";
-    private final static String UPDATE_LAST_TRANSACTION_TIMESTAMP_QUERY = "MERGE (ltr:LastTransactionReplicated {id:'SINGLETON'}) " +
-            "SET tr.lastTimeRecorded = %d";
+    private final static String LOCAL_TIMESTAMP_QUERY = "MATCH (ltr:LastTransactionReplicated:LocalTx {id:'SINGLETON'}) RETURN ltr.lastTimeRecorded";
+    private final static String UPDATE_LAST_TRANSACTION_TIMESTAMP_QUERY = "MERGE (ltr:LastTransactionReplicated:LocalTx {id:'SINGLETON'}) " +
+            "SET ltr.lastTimeRecorded = toInteger(%d)";
 
     public static Long getLastReplicationTimestamp(GraphDatabaseService gds) {
 
@@ -23,7 +23,7 @@ public class TransactionHistoryManager {
              Result result = tx.execute( LOCAL_TIMESTAMP_QUERY) )
         {
             while (result.hasNext()) {
-                timeStamp = (Long) result.next().get(LAST_TIME_RECORDED);
+                timeStamp = (long) result.next().get(LAST_TIME_RECORDED);
             }
 
             if (timeStamp == null) {
@@ -39,7 +39,7 @@ public class TransactionHistoryManager {
         return timeStamp;
     }
 
-    public static void setLastReplicationTimestamp(GraphDatabaseService gds, Long timeStamp) {
+    public static void setLastReplicationTimestamp(GraphDatabaseService gds, long timeStamp) {
 
         try (Transaction tx = gds.beginTx()) {
 

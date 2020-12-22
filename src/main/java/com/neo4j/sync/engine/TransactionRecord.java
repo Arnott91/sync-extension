@@ -9,11 +9,11 @@ package com.neo4j.sync.engine;
  */
 
 public class TransactionRecord {
-    private final String timestampCreated;
+    private final long timestampCreated;
     private final String status;
     private final String transactionData;
     private final String transactionUUID;
-    public TransactionRecord(String timestampCreated, String status, String transactionData, String transactionUUID) {
+    public TransactionRecord(long timestampCreated, String status, String transactionData, String transactionUUID) {
 
         this.timestampCreated = timestampCreated;
         this.status = status;
@@ -29,7 +29,7 @@ public class TransactionRecord {
         return status;
     }
 
-    public String getTimestampCreated() {
+    public long getTimestampCreated() {
         return timestampCreated;
     }
 

@@ -49,14 +49,15 @@ public class TransactionRecorder {
                     node.delete();
 
                     return null;
-                } else if (l.name().equalsIgnoreCase("com.neo4j.sync.engine.TransactionRecord")) {
+                } else if (l.name().equalsIgnoreCase("TransactionRecord")) {
                     // didn't collapse all possibilities into an OR statement because I'm not
                     // sure whether we want to do anything else here depending on the label type.
                     // will probably replace with a switch.
                     return null;
-                } else if (l.name().equalsIgnoreCase("com.neo4j.sync.engine.LocalTx")){
+                } else if (l.name().equalsIgnoreCase("LocalTx")){
 
                     // DITTO
+                    node.delete();
 
                     return null;
                 }
@@ -116,7 +117,8 @@ public class TransactionRecorder {
         String transactionUUID = java.util.UUID.randomUUID().toString();
         //Long transactionId = transactionData.getTransactionId();
         Timestamp timestamp = new Timestamp(System.currentTimeMillis());
-        String timestampCreated = timestamp.toString();
+        //String timestampCreated = timestamp.toString();
+        long timestampCreated = timestamp.getTime();
 
 
 

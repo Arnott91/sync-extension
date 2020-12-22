@@ -1,9 +1,8 @@
 package com.neo4j.sync.engine;
 
-import org.neo4j.driver.AuthTokens;
-import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
-import org.neo4j.driver.Result;
+import org.codehaus.jettison.json.JSONException;
+import org.neo4j.driver.*;
+import org.neo4j.driver.Record;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.logging.Log;
 
@@ -11,6 +10,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import static com.neo4j.sync.engine.ReplicationEngine.Status.RUNNING;
 import static com.neo4j.sync.engine.ReplicationEngine.Status.STOPPED;
@@ -62,38 +62,36 @@ public class ReplicationEngine {
 
             // next go and grab the transaction records from the remote database
             Result run = driver.session().run(format(REPLICATION_QUERY, lastTransactionTimestamp));
-
-            run.forEachRemaining(System.out::println);
-
-            // this.transactionRecordTimestamp = run.next().get("timeCreated").asLong();
-
-            // next, write transactionData to the local database using the GraphWriter
-            //
-//            try  {
-//                GraphWriter writer = new GraphWriter("{test:}",gds, log);
-//                writer.executeCRUDOperation();
-//
-//
-//            } catch (JSONException e){
-//
-//                log.error(e.getMessage());
-//
-//            } finally
-//            {
-            //TransactionHistoryManager.setLastReplicationTimestamp(gds,this.transactionRecordTimestamp);
-            //           }
-
-
-//            ;
-
-
-            // finally update the local singleton node that keeps track of the timestamp of the last replicated record
-            // tx.execute(String.format(UPDATE_LAST_TRANSACTION_TIMESTAMP_QUERY, this.transactionRecordTimestamp)
-
+            try {
+                run.forEachRemaining((a) -> {
+                    try {
+                        replicate(a);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+                );
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
         }, 0, 60L, TimeUnit.SECONDS);
 
         this.status = RUNNING;
+    }
+
+    private Consumer<? super Record> replicate(Record record) throws JSONException {
+
+        // grab the transaction JSON data from the TransactionRecord node
+        Value transactionData = record.get("data");
+        // grab the timestamp from the TransactionRecord node
+        Value transactionTime = record.get("time");
+
+        GraphWriter graphWriter = new GraphWriter(transactionData.asString(), this.gds, log);
+        graphWriter.executeCRUDOperation();
+        TransactionHistoryManager.setLastReplicationTimestamp(gds,transactionTime.asLong());
+
+        return null;
     }
 
     public void stop() {
