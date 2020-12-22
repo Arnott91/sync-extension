@@ -29,7 +29,7 @@ public class GraphWriterTests {
     private final String NODE_PROPERTY_CHANGE = "{\"transactionEvents\":[{\"changeType\":\"NodePropertyChange\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":null,\"targetNodeLabels\":null,\"targetPrimaryKey\":null,\"properties\":[{\"propertyName\":\"test\",\"oldValue\":\"foo\",\"newValue\":null}],\"allProperties\":{\"uuid\":\"123XYZ\"},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";
     private final String NODE_PROPERTY_CHANGE2 = "{\"transactionEvents\":[{\"changeType\":\"NodePropertyChange\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":null,\"targetNodeLabels\":null,\"targetPrimaryKey\":null,\"properties\":[{\"propertyName\":\"test\",\"oldValue\":\"foo\",\"newValue\":\"bar\"}],\"allProperties\":{\"test\":\"bar\",\"uuid\":\"123XYZ\"},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";
     private final String REL_PROPERTY_CHANGE = "{\"transactionEvents\":[{\"changeType\":\"RelationPropertyChange\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":\"CONNECTED_TO\",\"targetNodeLabels\":[\"Test\"],\"targetPrimaryKey\":{\"uuid\":\"XYZ123\"},\"properties\":[{\"propertyName\":\"weight\",\"oldValue\":1,\"newValue\":2}],\"allProperties\":{\"weight\":2},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";
-    private static final String LOCAL_lABEL = "com.neo4j.sync.engine.LocalTx";
+    private static final String LOCAL_lABEL = "LocalTx";
     private static final String TEST_REL_TYPE = "CONNECTED_TO";
     private static final String TEST_REL_TYPE2 = "LIKES";
 
@@ -47,7 +47,7 @@ public class GraphWriterTests {
         graphWriter.executeCRUDOperation();
         Transaction tx = graphDatabaseAPI.beginTx();
         Iterable<Node> newNodes  = () -> tx.findNodes(Label.label(LOCAL_lABEL));
-        assertNotNull(newNodes);
+        assertTrue(newNodes.iterator().hasNext());
         newNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
         tx.commit();
     }
@@ -63,7 +63,7 @@ public class GraphWriterTests {
         graphWriter.executeCRUDOperation();
         Transaction tx = graphDatabaseAPI.beginTx();
         Iterable<Node> newNodes  = () -> tx.findNodes(Label.label(LOCAL_lABEL));
-        assertNotNull(newNodes);
+        assertTrue(newNodes.iterator().hasNext());
         newNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
 
         tx.commit();
@@ -79,7 +79,7 @@ public class GraphWriterTests {
         graphWriter.executeCRUDOperation();
         Transaction tx = graphDatabaseAPI.beginTx();
         Iterable<Node> newNodes  = () -> tx.findNodes(Label.label(LOCAL_lABEL));
-        assertNotNull(newNodes);
+        assertTrue(newNodes.iterator().hasNext());
         newNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
         newNodes.forEach(node -> assertTrue(node.hasRelationship(RelationshipType.withName((TEST_REL_TYPE)))));
 
@@ -97,7 +97,7 @@ public class GraphWriterTests {
         graphWriter.executeCRUDOperation();
         Transaction tx = graphDatabaseAPI.beginTx();
         Iterable<Node> newNodes  = () -> tx.findNodes(Label.label(LOCAL_lABEL));
-        assertNotNull(newNodes);
+        assertTrue(newNodes.iterator().hasNext());
         newNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
 
         for (Node node : newNodes) {
@@ -118,7 +118,7 @@ public class GraphWriterTests {
         graphWriter.executeCRUDOperation();
         Transaction tx = graphDatabaseAPI.beginTx();
         Iterable<Node> newNodes  = () -> tx.findNodes(Label.label(LOCAL_lABEL));
-        assertNotNull(newNodes);
+        assertTrue(newNodes.iterator().hasNext());
         newNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
         tx.commit();
     }
@@ -161,7 +161,7 @@ public class GraphWriterTests {
         graphWriter.executeCRUDOperation();
         Transaction tx = graphDatabaseAPI.beginTx();
         Iterable<Node> changedNodes  = () -> tx.findNodes(Label.label(LOCAL_lABEL));
-        assertNotNull(changedNodes);
+        assertTrue(changedNodes.iterator().hasNext());
         changedNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
         changedNodes.forEach(node -> assertFalse(node.hasProperty("foo")));
         tx.commit();
@@ -177,7 +177,7 @@ public class GraphWriterTests {
         graphWriter.executeCRUDOperation();
         Transaction tx = graphDatabaseAPI.beginTx();
         Iterable<Node> changedNodes  = () -> tx.findNodes(Label.label(LOCAL_lABEL));
-        assertNotNull(changedNodes);
+        assertTrue(changedNodes.iterator().hasNext());
         changedNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
         changedNodes.forEach(node -> assertTrue(node.hasProperty("test")));
         changedNodes.forEach(node -> assertEquals("bar", node.getProperty("test")));
@@ -198,7 +198,7 @@ public class GraphWriterTests {
         graphWriter.executeCRUDOperation();
         Transaction tx = graphDatabaseAPI.beginTx();
         Iterable<Node> newNodes  = () -> tx.findNodes(Label.label(LOCAL_lABEL));
-        assertNotNull(newNodes);
+        assertTrue(newNodes.iterator().hasNext());
         newNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
         for (Node node : newNodes) {
             System.out.println(node.getDegree());

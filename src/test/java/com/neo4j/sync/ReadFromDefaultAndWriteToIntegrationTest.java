@@ -12,6 +12,9 @@ import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.*;
+import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
+import org.neo4j.configuration.Internal;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
@@ -130,13 +133,13 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             CoreClusterMember leader = targetCluster.getMemberWithAnyRole(Role.LEADER);
             GraphDatabaseFacade defaultDB = leader.defaultDatabase();
 
-            JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(transactionData.asString());
-            GraphWriter graphWriter = new GraphWriter(graphTxTranslation, defaultDB, mock(Log.class));
+
+            GraphWriter graphWriter = new GraphWriter(transactionData.asString(), defaultDB);
             graphWriter.executeCRUDOperation();
 
             org.neo4j.graphdb.Transaction tx = defaultDB.beginTx();
             Iterable<Node> newNodes  = () -> tx.findNodes(Label.label("Person"));
-            Assertions.assertNotNull(newNodes);
+            Assertions.assertTrue(newNodes.iterator().hasNext());
             newNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("Person"))));
             newNodes.forEach(node -> assertTrue(node.hasProperty("uuid")));
             newNodes.forEach(node -> assertTrue(node.hasRelationship(RelationshipType.withName("FOLLOWS"))));
@@ -186,7 +189,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
 
             org.neo4j.graphdb.Transaction tx = defaultDB.beginTx();
             Iterable<Node> deviceNodes = () -> tx.findNodes(Label.label("Device"));
-            Assertions.assertNotNull(deviceNodes);
+            Assertions.assertTrue(deviceNodes.iterator().hasNext());
             deviceNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("Device"))));
             deviceNodes.forEach(node -> assertTrue(node.hasProperty("uuid")));
             deviceNodes.forEach(node -> assertTrue(node.hasProperty("Name")));
@@ -271,7 +274,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
 
             org.neo4j.graphdb.Transaction tx = defaultDB.beginTx();
             Iterable<Node> deviceNodes = () -> tx.findNodes(Label.label("Device"));
-            Assertions.assertNotNull(deviceNodes);
+            Assertions.assertTrue(deviceNodes.iterator().hasNext());
             deviceNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("Device"))));
             deviceNodes.forEach(node -> assertTrue(node.hasProperty("uuid")));
             deviceNodes.forEach(node -> assertTrue(node.hasProperty("Name")));
@@ -366,7 +369,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
 
             org.neo4j.graphdb.Transaction tx = defaultDB.beginTx();
             Iterable<Node> deviceNodes = () -> tx.findNodes(Label.label("Device"));
-            Assertions.assertNotNull(deviceNodes);
+            Assertions.assertTrue(deviceNodes.iterator().hasNext());
             deviceNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("Device"))));
             deviceNodes.forEach(node -> assertTrue(node.hasProperty("uuid")));
             deviceNodes.forEach(node -> assertTrue(node.hasProperty("Name")));
@@ -442,6 +445,9 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
                 "MATCH (v1)-[e:HasInterface]->(v2) " +
                 "RETURN COUNT(*) as read;";
 
+        String federosQuery3 =
+                "MATCH (v1:Device) RETURN COUNT(v1) as read";
+
         String replicationPollingQuery = "MATCH (tr:TransactionRecord) WHERE tr.timeCreated > %d " +
                 "RETURN tr.transactionData as data, tr.timeCreated as time";
 
@@ -449,7 +455,8 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
                 "RETURN count(tr) as txRecords";
 
         CoreClusterMember leader = targetCluster.getMemberWithAnyRole(Role.LEADER);
-        GraphDatabaseFacade defaultDB = leader.defaultDatabase();
+        GraphDatabaseService defaultDB =  leader.managementService().database(DEFAULT_DATABASE_NAME);
+
 
         // grab the timestamp from the last transaction replicated to this cluster.
 
@@ -480,6 +487,9 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             // grab the timestamp from the TransactionRecord node
             Value transactionTime = record.get("time");
             System.out.println(transactionData);
+            System.out.println(transactionTime);
+
+
 
             // create a new GraphWriter instance.  This object knows how to breakdown a transaction message
             // recorded as a JSON String, order the events and write them to the local database.
@@ -498,7 +508,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             // mirrors what was written at the source database
             org.neo4j.graphdb.Transaction tx = defaultDB.beginTx();
             Iterable<Node> deviceNodes = () -> tx.findNodes(Label.label("Device"));
-            Assertions.assertNotNull(deviceNodes);
+            Assertions.assertTrue(deviceNodes.iterator().hasNext());
             deviceNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("Device"))));
             deviceNodes.forEach(node -> assertTrue(node.hasProperty("uuid")));
             deviceNodes.forEach(node -> assertTrue(node.hasProperty("Name")));
@@ -518,7 +528,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
 
 
             Iterable<Node> interfaceNodes = () -> tx.findNodes(Label.label("Interface"));
-            Assertions.assertNotNull(interfaceNodes);
+            Assertions.assertTrue(interfaceNodes.iterator().hasNext());
             interfaceNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("Interface"))));
             interfaceNodes.forEach(node -> assertTrue(node.hasProperty("uuid")));
             interfaceNodes.forEach(node -> assertTrue(node.hasProperty("Name")));
@@ -533,6 +543,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             interfaceNodes.forEach(node -> assertEquals("GigabitEthernet0/0",node.getProperty("CustomName")));
             interfaceNodes.forEach(node -> assertEquals("192.0.2.2",node.getProperty("IPAddress")));
             interfaceNodes.forEach(node -> assertTrue(node.hasRelationship(RelationshipType.withName("HasInterface"))));
+            System.out.println(interfaceNodes.iterator().next().getProperty("uuid"));
 
             // make sure we have our LastTransactionReplicated node.
             // this node is where we store the timestamp for the last replica written locally.
@@ -545,12 +556,17 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             lastTransactionReplicatedNodes.forEach(node -> assertEquals("SINGLETON",node.getProperty("id")));
             lastTransactionReplicatedNodes.forEach(node -> assertEquals(transactionTime.asLong(),node.getProperty("lastTimeRecorded")));
 
+//            org.neo4j.graphdb.Result queryResult = tx.execute(federosQuery2);
+//            assertTrue(queryResult.hasNext());
+//            assertEquals(1,queryResult.next().get("read"));
+
+
             // just for readability, we run a match statement that should succeed
             // on both source and target clusters.
 
-            org.neo4j.graphdb.Result queryResult = tx.execute(federosQuery2);
-            assertTrue(queryResult.hasNext());
-            assertEquals(1,queryResult.next().get("read"));
+//            org.neo4j.graphdb.Result queryResult = tx.execute(federosQuery3);
+//            assertTrue(queryResult.hasNext());
+//            assertEquals(1,queryResult.next().get("read"));
 
             // here we make sure that the transaction we replicated
             // won't generate it's own TransactionRecord node
@@ -561,11 +577,116 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
 
             org.neo4j.graphdb.Result queryResult2 = tx.execute(transactionRecordQuery);
             assertTrue(queryResult2.hasNext());
-            assertEquals(0,queryResult2.next().get("txRecords"));
+            assertEquals(0,(long) queryResult2.next().get("txRecords"));
 
             // hopefully we only see green checks!
 
             tx.commit();
+
+
+            System.out.println("Sanity check!  We've made it through the test");
+
+
+
+
+
+
+
+        }
+    }
+
+    @Test
+    public void runningSameQueryOnSourceAndTargetTest() throws Exception {
+
+        String sourceWriteQuery = "WITH timestamp() AS tm\n" +
+                "        MERGE (v1:Device {Name: 'usfix-rtr2.federos.com', ZoneID: 1})\n" +
+                "ON CREATE SET v1 += {DNSName: \"usfix-rtr2.federos.com\", DeviceID: 1, TimestampModified: tm, uuid: randomUUID()}\n" +
+                "ON MATCH SET v1 += {DNSName: \"usfix-rtr2.federos.com\", DeviceID: 1, TimestampModified: tm}\n" +
+                "        MERGE (v2:Interface {Name: 'usfix-rtr2.federos.com:GigabitEthernet0/0', DeviceName: 'usfix-rtr2.federos.com', ZoneID: 1})\n" +
+                "ON CREATE SET v2 += {CustomName: \"GigabitEthernet0/0\", IPAddress: \"192.0.2.2\", uuid: randomUUID()}\n" +
+                "ON MATCH SET v2 += {CustomName: \"GigabitEthernet0/0\", IPAddress: \"192.0.2.2\"}\n" +
+                "        MERGE (v1)-[e:HasInterface]->(v2)\n" +
+                "ON CREATE SET e += {TimestampModified: tm, uuid: randomUUID()}\n" +
+                "ON MATCH SET e += {TimestampModified: tm} RETURN COUNT(*) as written;";
+
+        String queryThatShouldReturnAPathOnBoth =
+                "MATCH (v1:Device {Name: 'usfix-rtr2.federos.com', ZoneID: 1}) " +
+                        "MATCH (v2:Interface {Name: 'usfix-rtr2.federos.com:GigabitEthernet0/0', DeviceName: 'usfix-rtr2.federos.com', ZoneID: 1}) " +
+                        "MATCH (v1)-[e:HasInterface]->(v2) " +
+                        "RETURN COUNT(*) as read;";
+
+        String replicationPollingQuery = "MATCH (tr:TransactionRecord) WHERE tr.timeCreated > %d " +
+                "RETURN tr.transactionData as data, tr.timeCreated as time";
+
+
+
+        CoreClusterMember targetLeader = targetCluster.getMemberWithAnyRole(Role.LEADER);
+        GraphDatabaseFacade targetDefaultDB = targetLeader.defaultDatabase();
+
+        CoreClusterMember sourceLeader = targetCluster.getMemberWithAnyRole(Role.LEADER);
+        GraphDatabaseFacade sourceDefaultDB = sourceLeader.defaultDatabase();
+
+        // grab the timestamp from the last transaction replicated to this cluster.
+
+        long lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(targetDefaultDB);
+
+        try (Driver driver = driver(new URI("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
+
+            Session session = driver.session(SessionConfig.builder().withDatabase(DEFAULT_DATABASE_NAME).build());
+
+            // run the query provided by Federos that creates a common pattern in their application
+            Result result = session.run(sourceWriteQuery);
+            // make sure it succeeded.
+            assertEquals(1, result.list().size());
+
+        }
+
+        try (Driver driver = driver(new URI("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
+
+            Session session = driver.session(SessionConfig.builder().withDatabase(DEFAULT_DATABASE_NAME).build());
+            // run the query that polls the source server for transactions that have a timestamp
+            // greater than the timestamp of the last replicated transaction.
+            // in this case we only have one.  In reality there could be many.
+            Result result = session.run(String.format(replicationPollingQuery,lastTransactionTimestamp));
+            Record record = result.single();
+
+            // grab the transaction JSON data from the TransactionRecord node
+            Value transactionData = record.get("data");
+            // grab the timestamp from the TransactionRecord node
+            Value transactionTime = record.get("time");
+            System.out.println(transactionData);
+
+            // create a new GraphWriter instance.  This object knows how to breakdown a transaction message
+            // recorded as a JSON String, order the events and write them to the local database.
+
+            GraphWriter graphWriter = new GraphWriter(transactionData.asString(), targetDefaultDB, mock(Log.class));
+            graphWriter.executeCRUDOperation();
+
+
+            // now that we've replicated the transaction from the source
+            // let's record the timestamp from the TransactionRecord node locally
+            // so we know when the last replica was written.
+            // we can then use that timestamp to poll for changes that happen after that timestamp.
+            TransactionHistoryManager.setLastReplicationTimestamp(targetDefaultDB,transactionTime.asLong());
+
+
+
+            // just for readability, we run a match statement that should succeed
+            // on both source and target clusters.
+
+            // query on target
+            org.neo4j.graphdb.Transaction targetTx = targetDefaultDB.beginTx();
+            org.neo4j.graphdb.Result targetQueryResult = targetTx.execute(queryThatShouldReturnAPathOnBoth);
+            assertTrue(targetQueryResult.hasNext());
+            assertEquals(1,(long) targetQueryResult.next().get("read"));
+            targetTx.commit();
+
+            // same query at source
+            org.neo4j.graphdb.Transaction sourceTx = sourceDefaultDB.beginTx();
+            org.neo4j.graphdb.Result sourceQueryResult = sourceTx.execute(queryThatShouldReturnAPathOnBoth);
+            assertTrue(sourceQueryResult.hasNext());
+            assertEquals(1,(long) sourceQueryResult.next().get("read"));
+            sourceTx.commit();
 
 
             System.out.println("Sanity check!  We've made it through the test");

@@ -53,6 +53,21 @@ public class TransactionFileLogger {
         }
     }
 
+    public static void AppendTransactionLog(String transactionData, String transactionUUID, long transactionId, long transactionTimestamp) {
+
+        initializeTxLogFile();
+
+        String logFileFullPath = TX_LOG_FILE_DIR + "/" + TX_LOG_FILE_NAME;
+        String transactionRecord = transactionId + ',' + transactionUUID + ',' + transactionTimestamp + "," + transactionData + "\n";
+        File logFile = new File(logFileFullPath);
+
+        try (FileWriter logWriter = new FileWriter(logFile, true)) {
+            logWriter.write(transactionRecord);
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
     public static void AppendRollbackTransactionLog(String transactionUUID, long transactionTimestamp, Log log) {
 
         initializeTxRollbackLogFile();
@@ -65,6 +80,21 @@ public class TransactionFileLogger {
             logWriter.write(rBTransactionRecord);
         } catch (IOException e) {
             log.error(e.getMessage(), e);
+        }
+    }
+
+    public static void AppendRollbackTransactionLog(String transactionUUID, long transactionTimestamp) {
+
+        initializeTxRollbackLogFile();
+
+        String rbLogFileFullPath = TX_RB_LOG_FILE_DIR + "/" + TX_RB_LOG_FILE_NAME;
+        String rBTransactionRecord = transactionUUID + ',' + transactionTimestamp + "/n";
+        File logFile = new File(rbLogFileFullPath);
+
+        try (FileWriter logWriter = new FileWriter(logFile, true)) {
+            logWriter.write(rBTransactionRecord);
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
         }
     }
 }

@@ -10,6 +10,7 @@ import org.neo4j.logging.LogProvider;
 import scala.util.parsing.json.JSON;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class GraphWriter {
@@ -44,6 +45,15 @@ public class GraphWriter {
         this.transactionEvents = TransactionDataParser.getTransactionEvents(new JSONObject(graphTransaction));
         this.graphDb = (GraphDatabaseAPI) graphDb;
         this.log = log;
+    }
+
+    public GraphWriter(String graphTransaction, GraphDatabaseService graphDb) throws JSONException {
+
+        // split the transactionEvents JSON into a list of separate events
+
+        this.transactionEvents = TransactionDataParser.getTransactionEvents(new JSONObject(graphTransaction));
+        this.graphDb = (GraphDatabaseAPI) graphDb;
+
     }
 
 
@@ -148,9 +158,11 @@ public class GraphWriter {
             }
             tx.commit();
         } catch (Exception e) {
-            log.error(e.getMessage(), e);
+            System.out.println(e.getMessage());
+            ///log.error(e.getMessage(), e);
         } finally {
-            log.info("proc write complete");
+            System.out.println("tx complete");
+            //og.info("proc write complete");
         }
     }
 
@@ -189,10 +201,11 @@ public class GraphWriter {
             }
             tx.commit();
         } catch (Exception e) {
-            // log exception
-            log.error(e.getMessage(), e);
+            System.out.println(e.getMessage());
+            ///log.error(e.getMessage(), e);
         } finally {
-            log.info("proc write complete");
+            System.out.println("tx complete");
+            //og.info("proc write complete");
         }
     }
 
@@ -213,9 +226,11 @@ public class GraphWriter {
         try (Transaction tx = graphDb.beginTx()) {
             // first try and find the nodes.  If they don't exist we must create them.
 
-            Node startNode = tx.findNode(startSearchLabel, startPrimaryKey[0], startPrimaryKey[1]);
 
-            Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0], targetPrimaryKey[1]);
+            Node startNode = tx.findNode(startSearchLabel, startPrimaryKey[0].toString(), startPrimaryKey[1].toString());
+
+
+            Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0].toString(), targetPrimaryKey[1].toString());
 
             Relationship relationshipFrom = startNode.createRelationshipTo(targetNode, RelationshipType.withName(TransactionDataParser.getRelationType(event)));
             if (properties.size() > 0) properties.forEach(relationshipFrom::setProperty);
@@ -225,10 +240,11 @@ public class GraphWriter {
 
             tx.commit();
         } catch (Exception e) {
-            // log exception
-            log.error(e.getMessage(), e);
+            System.out.println(e.getMessage());
+            ///log.error(e.getMessage(), e);
         } finally {
-            log.info("add relation succeeded");
+            System.out.println("tx complete");
+            //og.info("proc write complete");
         }
     }
 
@@ -250,10 +266,11 @@ public class GraphWriter {
             }
             tx.commit();
         } catch (Exception e) {
-            // log exception
-            log.error(e.getMessage(), e);
+            System.out.println(e.getMessage());
+            ///log.error(e.getMessage(), e);
         } finally {
-            log.info("delete relation completed");
+            System.out.println("tx complete");
+            //og.info("proc write complete");
         }
     }
 
@@ -268,9 +285,11 @@ public class GraphWriter {
             foundNode.delete();
             tx.commit();
         } catch (Exception e) {
-            log.error(e.getMessage(), e);
+            System.out.println(e.getMessage());
+            ///log.error(e.getMessage(), e);
         } finally {
-            log.info("delete node completed");
+            System.out.println("tx complete");
+            //og.info("proc write complete");
         }
     }
 
@@ -300,9 +319,11 @@ public class GraphWriter {
             tx.commit();
 
         } catch (Exception e) {
-            log.error(e.getMessage(), e);
+            System.out.println(e.getMessage());
+            ///log.error(e.getMessage(), e);
         } finally {
-            log.info("change node properties succeeded");
+            System.out.println("tx complete");
+            //og.info("proc write complete");
         }
     }
 
@@ -322,9 +343,11 @@ public class GraphWriter {
             properties.forEach(foundNode::setProperty);
             tx.commit();
         } catch (Exception e) {
-            log.error(e.getMessage(), e);
+            System.out.println(e.getMessage());
+            ///log.error(e.getMessage(), e);
         } finally {
-            log.info("proc write complete");
+            System.out.println("tx complete");
+            //og.info("proc write complete");
         }
     }
 
@@ -348,12 +371,11 @@ public class GraphWriter {
 
             tx.commit();
         } catch (Exception e) {
-            // log exception
-            //this.logException(e, databaseService);
-            log.error(e.getMessage(), e);
+            System.out.println(e.getMessage());
+            ///log.error(e.getMessage(), e);
         } finally {
-            //log.info("proc write complete");
-            log.info("add node succeeded");
+            System.out.println("tx complete");
+            //og.info("proc write complete");
         }
     }
 }

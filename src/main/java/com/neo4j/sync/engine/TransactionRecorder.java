@@ -57,7 +57,7 @@ public class TransactionRecorder {
                 } else if (l.name().equalsIgnoreCase("LocalTx")){
 
                     // DITTO
-                    node.delete();
+                    //node.delete();
 
                     return null;
                 }

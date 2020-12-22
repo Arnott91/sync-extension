@@ -121,8 +121,7 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
         if (logTransaction) {
             try {
                 TransactionFileLogger.AppendTransactionLog(txData, beforeCommitTxId, data.getTransactionId(),
-                        transactionTimestamp,
-                        getLog(sourceDatabase));
+                        transactionTimestamp);
             } catch (Exception e) {
                 //getLog(sourceDatabase).error(e.getMessage(), e);
                 System.out.println(e.getMessage());
@@ -143,7 +142,7 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
 
         if (replicate) {
             try {
-                TransactionFileLogger.AppendRollbackTransactionLog(this.beforeCommitTxId, this.transactionTimestamp, getLog(sourceDatabase));
+                TransactionFileLogger.AppendRollbackTransactionLog(this.beforeCommitTxId, this.transactionTimestamp);
             } catch (Exception e) {
                 // log exception
                 //getLog(sourceDatabase).error(e.getMessage(), e);
