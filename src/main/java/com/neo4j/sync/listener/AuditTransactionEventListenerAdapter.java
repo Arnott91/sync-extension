@@ -5,7 +5,6 @@ package com.neo4j.sync.listener;
 import com.neo4j.sync.engine.TransactionFileLogger;
 import com.neo4j.sync.engine.TransactionRecord;
 import com.neo4j.sync.engine.TransactionRecorder;
-import com.neo4j.sync.start.SyncExtensionFactory;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -48,9 +47,9 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
     private String txData;
     private boolean logTransaction = false;
     private boolean replicate = false;
-    private TransactionRecord txRecord;
 
-    private ExecutorService executorService = Executors.newSingleThreadExecutor();
+
+    //private ExecutorService executorService = Executors.newSingleThreadExecutor();
 
 
     @Override
