@@ -269,7 +269,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             GraphDatabaseFacade defaultDB = leader.defaultDatabase();
 
 
-            GraphWriter graphWriter = new GraphWriter(transactionData.asString(), defaultDB, mock(Log.class));
+            GraphWriter graphWriter = new GraphWriter(transactionData.asString(), defaultDB);
             graphWriter.executeCRUDOperation();
 
             org.neo4j.graphdb.Transaction tx = defaultDB.beginTx();
@@ -408,9 +408,9 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             Iterable<Node> lastTransactionReplicatedNodes = () -> tx.findNodes(Label.label("LastTransactionReplicated"));
             Assertions.assertNotNull(lastTransactionReplicatedNodes);
             lastTransactionReplicatedNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("LastTransactionReplicated"))));
-            lastTransactionReplicatedNodes.forEach(node -> assertTrue(node.hasProperty("id")));
+            lastTransactionReplicatedNodes.forEach(node -> assertTrue(node.hasProperty("uuid")));
             lastTransactionReplicatedNodes.forEach(node -> assertTrue(node.hasProperty("lastTimeRecorded")));
-            lastTransactionReplicatedNodes.forEach(node -> assertEquals("SINGLETON",node.getProperty("id")));
+            lastTransactionReplicatedNodes.forEach(node -> assertEquals("SINGLETON",node.getProperty("uuid")));
             lastTransactionReplicatedNodes.forEach(node -> assertEquals(transactionTime.asLong(),node.getProperty("lastTimeRecorded")));
 
 

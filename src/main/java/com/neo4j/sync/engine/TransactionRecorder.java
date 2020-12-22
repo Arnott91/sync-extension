@@ -89,8 +89,16 @@ public class TransactionRecorder {
 
         for (Relationship createdRelationship : transactionData.createdRelationships())
         {
-            processAddRemoveRelationship(createdRelationship, auditValues,
-                    AuditNode.ADD_RELATION);
+            if (createdRelationship.getEndNode().hasLabel(Label.label("LocalTx")) || createdRelationship.getStartNode().hasLabel(Label.label("LocalTx"))) {
+                return null;
+            } else {
+
+                processAddRemoveRelationship(createdRelationship, auditValues,
+                        AuditNode.ADD_RELATION);
+
+
+            }
+
         }
 
         for (Relationship deletedRelationship : transactionData.deletedRelationships())
