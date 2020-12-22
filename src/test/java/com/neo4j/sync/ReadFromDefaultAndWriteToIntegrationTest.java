@@ -2,6 +2,7 @@ package com.neo4j.sync;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.sync.engine.GraphWriter;
 import com.neo4j.sync.engine.TransactionHistoryManager;
@@ -605,10 +606,10 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
 
 
 
-        CoreClusterMember targetLeader = targetCluster.getMemberWithAnyRole(Role.LEADER);
+        CoreClusterMember targetLeader = targetCluster.awaitLeader();
         GraphDatabaseFacade targetDefaultDB = targetLeader.defaultDatabase();
 
-        CoreClusterMember sourceLeader = sourceCluster.getMemberWithAnyRole(Role.LEADER);
+        CoreClusterMember sourceLeader = sourceCluster.awaitLeader();
         GraphDatabaseFacade sourceDefaultDB = sourceLeader.defaultDatabase();
 
         // grab the timestamp from the last transaction replicated to this cluster.
