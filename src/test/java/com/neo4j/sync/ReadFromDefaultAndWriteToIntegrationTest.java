@@ -623,7 +623,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
         CoreClusterMember targetLeader = targetCluster.getMemberWithAnyRole(Role.LEADER);
         GraphDatabaseFacade targetDefaultDB = targetLeader.defaultDatabase();
 
-        CoreClusterMember sourceLeader = targetCluster.getMemberWithAnyRole(Role.LEADER);
+        CoreClusterMember sourceLeader = sourceCluster.getMemberWithAnyRole(Role.LEADER);
         GraphDatabaseFacade sourceDefaultDB = sourceLeader.defaultDatabase();
 
         // grab the timestamp from the last transaction replicated to this cluster.
