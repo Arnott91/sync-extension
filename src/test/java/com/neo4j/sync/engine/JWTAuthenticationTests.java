@@ -10,7 +10,9 @@ import com.neo4j.sync.listener.AuditTransactionEventListenerAdapter;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import io.jsonwebtoken.*;
 import org.junit.jupiter.api.*;
+import org.neo4j.cypher.internal.expressions.In;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.*;
@@ -20,17 +22,27 @@ import org.neo4j.graphdb.event.DatabaseEventListenerAdapter;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Log;
 import org.neo4j.test.extension.Inject;
+import io.jsonwebtoken.impl.crypto.MacProvider;
+
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
 
 
 import java.net.URI;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
+import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.driver.GraphDatabase.driver;
 
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
 @ClusterExtension
 public class JWTAuthenticationTests {
+
 
     @Inject
     // the clusterFactory is initialized because of the @ClusterExtension annotation (pre-compiler stuff).
@@ -46,6 +58,8 @@ public class JWTAuthenticationTests {
             .withNumberOfReadReplicas(0);
 
     private AuditTransactionEventListenerAdapter listener;
+
+    private static final java.util.UUID UUID = null;
 
     @BeforeEach
     void setup() throws Exception {
@@ -93,5 +107,44 @@ public class JWTAuthenticationTests {
 
         }
     }
+
+    @Test
+    public void simpleJWTUseTest()  throws Exception {
+
+        Key key = MacProvider.generateKey();
+
+        String jwtString = Jwts.builder().setSubject("Joe").signWith(SignatureAlgorithm.HS512, key).compact();
+        assert Jwts.parser().setSigningKey(key).parseClaimsJws(jwtString).getBody().getSubject().equals("Joe");
+    }
+
+    @Test
+    public void simpleJWTSBuilderTest()  throws Exception {
+
+        Instant thisInstant = Instant.now();
+        String jwtToken = Jwts.builder()
+                .claim("name", "Jane Doe")
+                .claim("email", "jane@example.com")
+                .setSubject("jane")
+                .setId(UUID.randomUUID().toString())
+                .setIssuedAt(Date.from(thisInstant))
+                .setExpiration(Date.from(thisInstant.plus(5l, ChronoUnit.MINUTES)))
+                .compact();
+
+        System.out.println(jwtToken);
+
+        Jwt<Header, Claims> jwt = Jwts.parserBuilder()
+                .setSigningKey("x")
+                .build()
+                .parseClaimsJwt(jwtToken);
+
+        assertTrue(jwt.getHeader().size() > 0);
+        System.out.println(jwt.getHeader().getType());
+        System.out.println(jwt.getBody().getId().toString());
+        assertTrue(jwt.getBody().getSubject().toString().equals("jane"));
+
+
+
+    }
+
 
 }
