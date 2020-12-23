@@ -19,8 +19,12 @@ public class TransactionFileLogger {
 
     private static final String TX_LOG_FILE_DIR = "c:/OUTBOUND_TX";
     private static final String TX_RB_LOG_FILE_DIR = "c:/ROLLBACK_OUTBOUND_TX";
+    private static final String IB_TX_LOG_FILE_DIR = "c:/INBOUND_TX;";
+    private static final String POLL_LOG_FILE_DIR = "c:/POLLING;";
+    private static final String TX_LOG_FILE_NAME_IN = "inbound_tx.log";
     private static final String TX_LOG_FILE_NAME = "outbound_tx.log";
     private static final String TX_RB_LOG_FILE_NAME = "rb_outbound_tx.log";
+    private static final String POLLING_LOG = "tx_poll.log";
 
     private static void initializeTxLogFile() {
 
@@ -35,6 +39,28 @@ public class TransactionFileLogger {
         File logFile = new File(TX_RB_LOG_FILE_DIR);
         if (!logFile.exists()) {
             logFile.mkdir();
+        }
+    }
+
+    private static void initializeTxLogFile(Logtype logtype) throws IOException {
+
+        String fileFullPath = null;
+        File logFile = null;
+
+        switch (logtype) {
+            case INBOUND_TX: fileFullPath = IB_TX_LOG_FILE_DIR + "/" + TX_LOG_FILE_NAME_IN;
+            break;
+            case OUTBOUND_TX: fileFullPath = TX_LOG_FILE_DIR + "/" + TX_LOG_FILE_NAME;
+            break;
+            case TX_POLLING: fileFullPath = IB_TX_LOG_FILE_DIR + "/" + POLLING_LOG;
+        }
+
+        if (fileFullPath != null) logFile = new File(fileFullPath);
+        if (!logFile.exists()) {
+            logFile.mkdir();
+            boolean newFile = logFile.createNewFile();
+
+
         }
     }
 
@@ -96,5 +122,21 @@ public class TransactionFileLogger {
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
+    }
+
+    public static void AppendPollingLog(String message) throws IOException {
+
+        initializeTxLogFile(Logtype.TX_POLLING);
+
+        String pollLogFileFullPath =  POLL_LOG_FILE_DIR + "/" + POLLING_LOG;
+        File logFile = new File(pollLogFileFullPath);
+        try (FileWriter logWriter = new FileWriter(logFile, true)) {
+            logWriter.write(pollLogFileFullPath);
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+
+
+
     }
 }

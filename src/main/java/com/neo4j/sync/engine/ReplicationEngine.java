@@ -6,6 +6,8 @@ import org.neo4j.driver.Record;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.logging.Log;
 
+import java.io.IOException;
+import java.sql.Date;
 import java.util.Calendar;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -60,6 +62,11 @@ public class ReplicationEngine {
     public synchronized void start() {
         scheduledFuture = execService.scheduleAtFixedRate(() -> {
             // first, grab the timestamp of the last transaction to be replicated locally.
+            try {
+                TransactionFileLogger.AppendPollingLog("Polling starting: " + new Date(System.currentTimeMillis()));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
 
             this.lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(gds);
 
@@ -83,6 +90,12 @@ public class ReplicationEngine {
 
             Result runPrune = driver.session().run(format(PRUNE_QUERY, getThreeDaysAgo()));
            // we can log the number of transactions pruned when we implement logging
+
+            try {
+                TransactionFileLogger.AppendPollingLog("Polling stopping: " + new Date(System.currentTimeMillis()));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
 
         }, 0, 60L, TimeUnit.SECONDS);
 
