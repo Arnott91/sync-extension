@@ -38,6 +38,7 @@ public class TransactionRecorder {
 
         HashMap<Node, Map<String, AuditNode>> auditValues = new HashMap<>();
 
+
         for (Node node : transactionData.createdNodes())
         {
             Iterable<Label> labels = node.getLabels();

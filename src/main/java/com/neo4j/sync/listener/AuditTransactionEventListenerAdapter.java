@@ -9,6 +9,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.event.LabelEntry;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListener;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -33,6 +34,7 @@ import java.util.concurrent.Executors;
  * @author Jim Webber
  */
 public class AuditTransactionEventListenerAdapter implements TransactionEventListener<Node> {
+    public static final String LOCAL_TX = "LocalTx";
 
     //public static final String INTEGRATION_DATABASE = "INTEGRATION.DATABASE";
 
@@ -46,7 +48,8 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
     private long transactionTimestamp;
     private String txData;
     private boolean logTransaction = false;
-    private boolean replicate = false;
+    private boolean replicate = true;
+    private boolean justUpdatedTr = false;
 
 
     //private ExecutorService executorService = Executors.newSingleThreadExecutor();
@@ -58,21 +61,31 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
 
 
 
+
+
         // ge a handle to the transaction recorder.  This will grab information from the Transaction Data object
         // and populate a transaction record that we can use to both write a TransactionRecord node to the
         // local database and also to log the transaction in any of the logs.
         System.out.println("In the beforeCommit method of our event listener");
 
-        TransactionRecorder txRecorder = new TransactionRecorder(data);
-        TransactionRecord txRecord = txRecorder.serializeTransaction();
+
 
         // Check to make sure that we the transaction listener wasn't invoked because we committed a
         // transactionRecord node to the database.  If the TransactionRecorder encounters
         // a node with the TransactionRecord label, it will just return null.
 
-        this.replicate = txRecord != null;
+        this.replicate = true;
 
-        if (replicate) {
+        for (LabelEntry label: data.assignedLabels())
+        {
+            if (label.label().name().equals(LOCAL_TX)) this.replicate  = false;
+
+        }
+
+        if (replicate && !this.justUpdatedTr) {
+
+            TransactionRecorder txRecorder = new TransactionRecorder(data);
+            TransactionRecord txRecord = txRecorder.serializeTransaction();
             // let's grab the uuid of the transaction and a timestamp for logging in afterCommit and rollback
             // methods.
 
@@ -89,6 +102,7 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
 
             try (Transaction tx = sourceDatabase.beginTx()) {
                 Node txRecordNode = tx.createNode(Label.label(TX_RECORD_LABEL));
+                txRecordNode.addLabel(Label.label(LOCAL_TX));
                 txRecordNode.setProperty(TX_RECORD_STATUS_KEY, txRecord.getStatus());
                 txRecordNode.setProperty(TX_RECORD_CREATE_TIME_KEY, txRecord.getTimestampCreated());
                 txRecordNode.setProperty(TX_RECORD_NODE_BEFORE_COMMIT_KEY, txRecord.getTransactionUUID());
@@ -99,6 +113,7 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
                 System.out.println(e.getMessage());
             } finally {
                 logTransaction = true;
+                this.justUpdatedTr = false;
             }
 
         }
@@ -119,6 +134,10 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
 
 
         if (logTransaction) {
+
+
+
+
             try {
                 TransactionFileLogger.AppendTransactionLog(txData, beforeCommitTxId, data.getTransactionId(),
                         transactionTimestamp);
@@ -127,6 +146,17 @@ public class AuditTransactionEventListenerAdapter implements TransactionEventLis
                 System.out.println(e.getMessage());
             } finally {
                 logTransaction = false;
+            }
+
+            try (Transaction tx = sourceDatabase.beginTx()) {
+                Node txRecordNode = tx.findNode(Label.label(TX_RECORD_LABEL), TX_RECORD_NODE_BEFORE_COMMIT_KEY, beforeCommitTxId);
+                txRecordNode.setProperty("internalTransactionId", data.getTransactionId());
+                txRecordNode.setProperty("commitTime", data.getCommitTime());
+                this.justUpdatedTr = true;
+                tx.commit();
+            } catch (Exception e) {
+                //getLog(sourceDatabase).error(e.getMessage(), e);
+                System.out.println(e.getMessage());
             }
         }
         System.out.println("In the afterCommit method of our event listener");

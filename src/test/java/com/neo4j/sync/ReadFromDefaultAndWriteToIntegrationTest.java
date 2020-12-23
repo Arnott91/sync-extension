@@ -402,6 +402,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             Iterable<Node> lastTransactionReplicatedNodes = () -> tx.findNodes(Label.label("LastTransactionReplicated"));
             Assertions.assertNotNull(lastTransactionReplicatedNodes);
             lastTransactionReplicatedNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("LastTransactionReplicated"))));
+            lastTransactionReplicatedNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("LocalTx"))));
             lastTransactionReplicatedNodes.forEach(node -> assertTrue(node.hasProperty("uuid")));
             lastTransactionReplicatedNodes.forEach(node -> assertTrue(node.hasProperty("lastTimeRecorded")));
             lastTransactionReplicatedNodes.forEach(node -> assertEquals("SINGLETON",node.getProperty("uuid")));
@@ -535,11 +536,180 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             // this node is where we store the timestamp for the last replica written locally.
 
             Iterable<Node> lastTransactionReplicatedNodes = () -> tx.findNodes(Label.label("LastTransactionReplicated"));
-            Assertions.assertNotNull(lastTransactionReplicatedNodes);
+            Assertions.assertTrue(lastTransactionReplicatedNodes.iterator().hasNext());
             lastTransactionReplicatedNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("LastTransactionReplicated"))));
-            lastTransactionReplicatedNodes.forEach(node -> assertTrue(node.hasProperty("id")));
+            lastTransactionReplicatedNodes.forEach(node -> assertTrue(node.hasProperty("uuid")));
             lastTransactionReplicatedNodes.forEach(node -> assertTrue(node.hasProperty("lastTimeRecorded")));
-            lastTransactionReplicatedNodes.forEach(node -> assertEquals("SINGLETON",node.getProperty("id")));
+            lastTransactionReplicatedNodes.forEach(node -> assertEquals("SINGLETON",node.getProperty("uuid")));
+            lastTransactionReplicatedNodes.forEach(node -> assertEquals(transactionTime.asLong(),node.getProperty("lastTimeRecorded")));
+
+//            org.neo4j.graphdb.Result queryResult = tx.execute(federosQuery2);
+//            assertTrue(queryResult.hasNext());
+//            assertEquals(1,queryResult.next().get("read"));
+
+
+            // just for readability, we run a match statement that should succeed
+            // on both source and target clusters.
+
+//            org.neo4j.graphdb.Result queryResult = tx.execute(federosQuery3);
+//            assertTrue(queryResult.hasNext());
+//            assertEquals(1,queryResult.next().get("read"));
+
+            // here we make sure that the transaction we replicated
+            // won't generate it's own TransactionRecord node
+            // and be replicated back to the source.
+            // If there were one created for either the replicated transaction
+            // or the LastTransactionReplicated node then we would create
+            // an infinite loop of replicated transactions.
+
+            org.neo4j.graphdb.Result queryResult2 = tx.execute(transactionRecordQuery);
+            assertTrue(queryResult2.hasNext());
+            assertEquals(0,(long) queryResult2.next().get("txRecords"));
+
+            // hopefully we only see green checks!
+
+            tx.commit();
+
+
+            System.out.println("Sanity check!  We've made it through the test");
+
+
+
+
+
+
+
+        }
+    }
+
+    @Test
+    public void listenerShouldListenToDefaultAndWriteToIntegration7() throws Exception {
+
+        String federosQuery1 = "WITH timestamp() AS tm\n" +
+                "        MERGE (v1:Device {Name: 'usfix-rtr2.federos.com', ZoneID: 1})\n" +
+                "ON CREATE SET v1 += {DNSName: \"usfix-rtr2.federos.com\", DeviceID: 1, TimestampModified: tm, uuid: randomUUID()}\n" +
+                "ON MATCH SET v1 += {DNSName: \"usfix-rtr2.federos.com\", DeviceID: 1, TimestampModified: tm}\n" +
+                "        MERGE (v2:Interface {Name: 'usfix-rtr2.federos.com:GigabitEthernet0/0', DeviceName: 'usfix-rtr2.federos.com', ZoneID: 1})\n" +
+                "ON CREATE SET v2 += {CustomName: \"GigabitEthernet0/0\", IPAddress: \"192.0.2.2\", uuid: randomUUID()}\n" +
+                "ON MATCH SET v2 += {CustomName: \"GigabitEthernet0/0\", IPAddress: \"192.0.2.2\"}\n" +
+                "        MERGE (v1)-[e:HasInterface]->(v2)\n" +
+                "ON CREATE SET e += {TimestampModified: tm, uuid: randomUUID()}\n" +
+                "ON MATCH SET e += {TimestampModified: tm} RETURN COUNT(*) as written;";
+
+        String federosQuery2 =
+                "MATCH (v1:Device {Name: 'usfix-rtr2.federos.com', ZoneID: 1}) " +
+                        "MATCH (v2:Interface {Name: 'usfix-rtr2.federos.com:GigabitEthernet0/0', DeviceName: 'usfix-rtr2.federos.com', ZoneID: 1}) " +
+                        "MATCH (v1)-[e:HasInterface]->(v2) " +
+                        "RETURN COUNT(*) as read;";
+
+        String federosQuery3 =
+                "MATCH (v1:Device) RETURN COUNT(v1) as read";
+
+        String replicationPollingQuery = "MATCH (tr:TransactionRecord) WHERE tr.timeCreated > %d " +
+                "RETURN tr.transactionData as data, tr.timeCreated as time";
+
+        String transactionRecordQuery = "MATCH (tr:TransactionRecord) " +
+                "RETURN count(tr) as txRecords";
+
+        CoreClusterMember leader = targetCluster.awaitLeader();
+        GraphDatabaseService defaultDB = leader.managementService().database(DEFAULT_DATABASE_NAME);
+
+
+        // grab the timestamp from the last transaction replicated to this cluster.
+
+        long lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(defaultDB);
+
+        try (Driver driver = driver(new URI("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
+
+            Session session = driver.session(SessionConfig.builder().withDatabase(DEFAULT_DATABASE_NAME).build());
+
+            // run the query provided by Federos that creates a common pattern in their application
+            Result result = session.run(federosQuery1);
+            // make sure it succeeded.
+            assertEquals(1, result.list().size());
+
+        }
+
+        try (Driver driver = driver(new URI("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
+
+            Session session = driver.session(SessionConfig.builder().withDatabase(DEFAULT_DATABASE_NAME).build());
+            // run the query that polls the source server for transactions that have a timestamp
+            // greater than the timestamp of the last replicated transaction.
+            // in this case we only have one.  In reality there could be many.
+            Result result = session.run(String.format(replicationPollingQuery, lastTransactionTimestamp));
+            Record record = result.single();
+
+            // grab the transaction JSON data from the TransactionRecord node
+            Value transactionData = record.get("data");
+            // grab the timestamp from the TransactionRecord node
+            Value transactionTime = record.get("time");
+            System.out.println(transactionData);
+            System.out.println(transactionTime);
+
+
+            // create a new GraphWriter instance.  This object knows how to breakdown a transaction message
+            // recorded as a JSON String, order the events and write them to the local database.
+
+            GraphWriter graphWriter = new GraphWriter(transactionData.asString(), defaultDB, mock(Log.class));
+            graphWriter.executeCRUDOperation();
+
+
+            // now that we've replicated the transaction from the source
+            // let's record the timestamp from the TransactionRecord node locally
+            // so we know when the last replica was written.
+            // we can then use that timestamp to poll for changes that happen after that timestamp.
+            TransactionHistoryManager.setLastReplicationTimestamp(defaultDB,transactionTime.asLong());
+
+            // ensure that what the GraphWriter has written to the local database
+            // mirrors what was written at the source database
+            org.neo4j.graphdb.Transaction tx = defaultDB.beginTx();
+            Iterable<Node> deviceNodes = () -> tx.findNodes(Label.label("Device"));
+            Assertions.assertTrue(deviceNodes.iterator().hasNext());
+            deviceNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("Device"))));
+            deviceNodes.forEach(node -> assertTrue(node.hasProperty("uuid")));
+            deviceNodes.forEach(node -> assertTrue(node.hasProperty("Name")));
+            deviceNodes.forEach(node -> assertTrue(node.hasProperty("DNSName")));
+            deviceNodes.forEach(node -> assertTrue(node.hasProperty("ZoneID")));
+            deviceNodes.forEach(node -> assertTrue(node.hasProperty("DeviceID")));
+            deviceNodes.forEach(node -> assertTrue(node.hasProperty("TimestampModified")));
+            deviceNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("Device"))));
+
+            deviceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com",node.getProperty("Name")));
+            deviceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com",node.getProperty("DNSName")));
+            deviceNodes.forEach(node -> assertEquals(1,node.getProperty("ZoneID")));
+            deviceNodes.forEach(node -> assertEquals(1,node.getProperty("DeviceID")));
+
+            deviceNodes.forEach(node -> assertTrue(node.hasRelationship(RelationshipType.withName("HasInterface"))));
+            deviceNodes.forEach(node -> assertTrue(node.getSingleRelationship(RelationshipType.withName("HasInterface"),Direction.OUTGOING).hasProperty("uuid")));
+
+
+            Iterable<Node> interfaceNodes = () -> tx.findNodes(Label.label("Interface"));
+            Assertions.assertTrue(interfaceNodes.iterator().hasNext());
+            interfaceNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("Interface"))));
+            interfaceNodes.forEach(node -> assertTrue(node.hasProperty("uuid")));
+            interfaceNodes.forEach(node -> assertTrue(node.hasProperty("Name")));
+            interfaceNodes.forEach(node -> assertTrue(node.hasProperty("DeviceName")));
+            interfaceNodes.forEach(node -> assertTrue(node.hasProperty("ZoneID")));
+            interfaceNodes.forEach(node -> assertTrue(node.hasProperty("CustomName")));
+            interfaceNodes.forEach(node -> assertTrue(node.hasProperty("IPAddress")));
+
+            interfaceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com:GigabitEthernet0/0",node.getProperty("Name")));
+            interfaceNodes.forEach(node -> assertEquals("usfix-rtr2.federos.com",node.getProperty("DeviceName")));
+            interfaceNodes.forEach(node -> assertEquals(1,node.getProperty("ZoneID")));
+            interfaceNodes.forEach(node -> assertEquals("GigabitEthernet0/0",node.getProperty("CustomName")));
+            interfaceNodes.forEach(node -> assertEquals("192.0.2.2",node.getProperty("IPAddress")));
+            interfaceNodes.forEach(node -> assertTrue(node.hasRelationship(RelationshipType.withName("HasInterface"))));
+            System.out.println(interfaceNodes.iterator().next().getProperty("uuid"));
+
+            // make sure we have our LastTransactionReplicated node.
+            // this node is where we store the timestamp for the last replica written locally.
+
+            Iterable<Node> lastTransactionReplicatedNodes = () -> tx.findNodes(Label.label("LastTransactionReplicated"));
+            Assertions.assertTrue(lastTransactionReplicatedNodes.iterator().hasNext());
+            lastTransactionReplicatedNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("LastTransactionReplicated"))));
+            lastTransactionReplicatedNodes.forEach(node -> assertTrue(node.hasProperty("uuid")));
+            lastTransactionReplicatedNodes.forEach(node -> assertTrue(node.hasProperty("lastTimeRecorded")));
+            lastTransactionReplicatedNodes.forEach(node -> assertEquals("SINGLETON",node.getProperty("uuid")));
             lastTransactionReplicatedNodes.forEach(node -> assertEquals(transactionTime.asLong(),node.getProperty("lastTimeRecorded")));
 
 //            org.neo4j.graphdb.Result queryResult = tx.execute(federosQuery2);

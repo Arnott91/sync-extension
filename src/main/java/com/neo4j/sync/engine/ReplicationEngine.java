@@ -6,6 +6,7 @@ import org.neo4j.driver.Record;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.logging.Log;
 
+import java.util.Calendar;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -17,6 +18,8 @@ import static com.neo4j.sync.engine.ReplicationEngine.Status.STOPPED;
 import static java.lang.String.format;
 
 public class ReplicationEngine {
+    private static final String PRUNE_QUERY = "MATCH (tr:TransactionRecord) WHERE tr.timeCreated < %d DETACH DELETE tr " +
+            "RETURN COUNT(tr) as deleted";
     private final Driver driver;
     private final ScheduledExecutorService execService;
     private ScheduledFuture<?> scheduledFuture;
@@ -61,9 +64,9 @@ public class ReplicationEngine {
             this.lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(gds);
 
             // next go and grab the transaction records from the remote database
-            Result run = driver.session().run(format(REPLICATION_QUERY, lastTransactionTimestamp));
+            Result runReplication = driver.session().run(format(REPLICATION_QUERY, lastTransactionTimestamp));
             try {
-                run.forEachRemaining((a) -> {
+                runReplication.forEachRemaining((a) -> {
                     try {
                         replicate(a);
                     } catch (JSONException e) {
@@ -74,6 +77,12 @@ public class ReplicationEngine {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+
+            // I assume we can run to sessions back to back on the same thread in this scheduler.
+            // Maybe we can provide more two threads?
+
+            Result runPrune = driver.session().run(format(PRUNE_QUERY, getThreeDaysAgo()));
+           // we can log the number of transactions pruned when we implement logging
 
         }, 0, 60L, TimeUnit.SECONDS);
 
@@ -106,4 +115,14 @@ public class ReplicationEngine {
     }
 
     public enum Status {RUNNING, STOPPED}
+
+    private long daysAgo(int daysPast) {
+        final Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DATE, -daysPast);
+        return (cal.getTime()).getTime();
+    }
+
+    private long getThreeDaysAgo() {
+        return daysAgo(3);
+    }
 }
