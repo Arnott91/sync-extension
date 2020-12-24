@@ -20,7 +20,7 @@ public class TransactionFileLogger {
     private static final String TX_LOG_FILE_DIR = "c:/OUTBOUND_TX";
     private static final String TX_RB_LOG_FILE_DIR = "c:/ROLLBACK_OUTBOUND_TX";
     private static final String IB_TX_LOG_FILE_DIR = "c:/INBOUND_TX;";
-    private static final String POLL_LOG_FILE_DIR = "c:/POLLING;";
+    private static final String POLL_LOG_FILE_DIR = "c:/POLLING";
     private static final String TX_LOG_FILE_NAME_IN = "inbound_tx.log";
     private static final String TX_LOG_FILE_NAME = "outbound_tx.log";
     private static final String TX_RB_LOG_FILE_NAME = "rb_outbound_tx.log";
@@ -48,11 +48,11 @@ public class TransactionFileLogger {
         File logFile = null;
 
         switch (logtype) {
-            case INBOUND_TX: fileFullPath = IB_TX_LOG_FILE_DIR + "/" + TX_LOG_FILE_NAME_IN;
+            case INBOUND_TX: fileFullPath = IB_TX_LOG_FILE_DIR;
             break;
-            case OUTBOUND_TX: fileFullPath = TX_LOG_FILE_DIR + "/" + TX_LOG_FILE_NAME;
+            case OUTBOUND_TX: fileFullPath = TX_LOG_FILE_DIR;
             break;
-            case TX_POLLING: fileFullPath = IB_TX_LOG_FILE_DIR + "/" + POLLING_LOG;
+            case TX_POLLING: fileFullPath = POLL_LOG_FILE_DIR;
         }
 
         if (fileFullPath != null) logFile = new File(fileFullPath);
@@ -99,7 +99,7 @@ public class TransactionFileLogger {
         initializeTxRollbackLogFile();
 
         String rbLogFileFullPath = TX_RB_LOG_FILE_DIR + "/" + TX_RB_LOG_FILE_NAME;
-        String rBTransactionRecord = transactionUUID + ',' + transactionTimestamp + "/n";
+        String rBTransactionRecord = transactionUUID + ',' + transactionTimestamp + "\n";
         File logFile = new File(rbLogFileFullPath);
 
         try (FileWriter logWriter = new FileWriter(logFile, true)) {
@@ -114,7 +114,7 @@ public class TransactionFileLogger {
         initializeTxRollbackLogFile();
 
         String rbLogFileFullPath = TX_RB_LOG_FILE_DIR + "/" + TX_RB_LOG_FILE_NAME;
-        String rBTransactionRecord = transactionUUID + ',' + transactionTimestamp + "/n";
+        String rBTransactionRecord = transactionUUID + ',' + transactionTimestamp + "\n";
         File logFile = new File(rbLogFileFullPath);
 
         try (FileWriter logWriter = new FileWriter(logFile, true)) {
@@ -127,11 +127,12 @@ public class TransactionFileLogger {
     public static void AppendPollingLog(String message) throws IOException {
 
         initializeTxLogFile(Logtype.TX_POLLING);
+        String pollMessage = message + "\n";
 
         String pollLogFileFullPath =  POLL_LOG_FILE_DIR + "/" + POLLING_LOG;
         File logFile = new File(pollLogFileFullPath);
         try (FileWriter logWriter = new FileWriter(logFile, true)) {
-            logWriter.write(pollLogFileFullPath);
+            logWriter.write(pollMessage);
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }

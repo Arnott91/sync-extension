@@ -85,6 +85,10 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             coreMember.managementService().unregisterTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
 
+        for (CoreClusterMember coreMember : targetCluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
     }
 
     @Test

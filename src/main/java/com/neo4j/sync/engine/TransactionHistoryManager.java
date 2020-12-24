@@ -9,7 +9,7 @@ import java.util.Map;
 
 public class TransactionHistoryManager {
 
-    public static final String LAST_TIME_RECORDED = "lastTimeRecorded";
+    public static final String LAST_TIME_RECORDED = "ltr.lastTimeRecorded";
     private final static String LOCAL_TIMESTAMP_QUERY = "MATCH (ltr:LastTransactionReplicated:LocalTx {uuid:'SINGLETON'}) RETURN ltr.lastTimeRecorded";
     private final static String UPDATE_LAST_TRANSACTION_TIMESTAMP_QUERY = "MERGE (ltr:LastTransactionReplicated:LocalTx {uuid:'SINGLETON'}) " +
             "SET ltr.lastTimeRecorded = toInteger(%d)";
@@ -33,6 +33,8 @@ public class TransactionHistoryManager {
             }
 
             tx.commit();
+        } catch (Exception e){
+            System.out.println(e.getMessage());
         }
 
 

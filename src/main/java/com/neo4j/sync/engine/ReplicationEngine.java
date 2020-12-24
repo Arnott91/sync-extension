@@ -14,6 +14,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.logging.Handler;
 
 import static com.neo4j.sync.engine.ReplicationEngine.Status.RUNNING;
 import static com.neo4j.sync.engine.ReplicationEngine.Status.STOPPED;
@@ -38,10 +39,17 @@ public class ReplicationEngine {
 
     private static ReplicationEngine instance;
     private Status status;
+    private static int runcount = 0;
 
     private ReplicationEngine(Driver driver) {
         this.driver = driver;
         this.execService = Executors.newScheduledThreadPool(1);
+    }
+
+    private ReplicationEngine(Driver driver, GraphDatabaseService gds) {
+        this.driver = driver;
+        this.execService = Executors.newScheduledThreadPool(1);
+        this.gds = gds;
     }
 
     public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password) {
@@ -51,6 +59,17 @@ public class ReplicationEngine {
 
         instance = new ReplicationEngine(
                 GraphDatabase.driver(remoteDatabaseURI, AuthTokens.basic(username, password)));
+        return instance();
+
+    }
+
+    public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, GraphDatabaseService gds) {
+        if (instance != null) {
+            instance.stop();
+        }
+
+        instance = new ReplicationEngine(
+                GraphDatabase.driver(remoteDatabaseURI, AuthTokens.basic(username, password)),gds);
         return instance();
 
     }
@@ -76,7 +95,9 @@ public class ReplicationEngine {
                 runReplication.forEachRemaining((a) -> {
                     try {
                         replicate(a);
-                    } catch (JSONException e) {
+                        TransactionFileLogger.AppendPollingLog("Polling source: " + new Date(System.currentTimeMillis()));
+
+                    } catch (JSONException | IOException e) {
                         e.printStackTrace();
                     }
                 }
@@ -99,15 +120,84 @@ public class ReplicationEngine {
 
         }, 0, 60L, TimeUnit.SECONDS);
 
+
+
         this.status = RUNNING;
+    }
+
+    public synchronized void start2() throws InterruptedException {
+
+
+
+        ScheduledExecutorService ses = Executors.newScheduledThreadPool(1);
+
+        Runnable replicationTask = () -> {
+            runcount ++;
+
+            try {
+                TransactionFileLogger.AppendPollingLog("Polling starting: " + new Date(System.currentTimeMillis()));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            System.out.println("Grabbing the last timestamp");
+            this.lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(gds);
+            System.out.println("Grabbed the last timestamp");
+            // next go and grab the transaction records from the remote database
+            Result runReplication = driver.session().run(format(REPLICATION_QUERY, lastTransactionTimestamp));
+            try {
+                runReplication.forEachRemaining((a) -> {
+                            try {
+                                replicate(a);
+                                TransactionFileLogger.AppendPollingLog("Polling source: " + new Date(System.currentTimeMillis()));
+
+                            } catch (JSONException | IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                );
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            // I assume we can run to sessions back to back on the same thread in this scheduler.
+            // Maybe we can provide more two threads?
+
+            Result runPrune = driver.session().run(format(PRUNE_QUERY, getThreeDaysAgo()));
+            // we can log the number of transactions pruned when we implement logging
+
+            try {
+                TransactionFileLogger.AppendPollingLog("Polling stopping: " + new Date(System.currentTimeMillis()));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+
+
+        };
+        ScheduledFuture<?> scheduledFuture = ses.scheduleAtFixedRate(replicationTask, 5, 60, TimeUnit.SECONDS);
+
+        while (true) {
+            System.out.println("runcount :" + runcount);
+            Thread.sleep(10000);
+            if (runcount == 5) {
+                System.out.println("Count is 5, cancel the scheduledFuture!");
+                scheduledFuture.cancel(true);
+                ses.shutdown();
+                break;
+            }
+        }
+
+
+
+
     }
 
     private Consumer<? super Record> replicate(Record record) throws JSONException {
 
         // grab the transaction JSON data from the TransactionRecord node
-        Value transactionData = record.get("data");
+        Value transactionData = record.get("tr.transactionData");
         // grab the timestamp from the TransactionRecord node
-        Value transactionTime = record.get("time");
+        Value transactionTime = record.get("tr.timeCreated");
 
         GraphWriter graphWriter = new GraphWriter(transactionData.asString(), this.gds, log);
         graphWriter.executeCRUDOperation();
@@ -127,7 +217,11 @@ public class ReplicationEngine {
         return status;
     }
 
-    public enum Status {RUNNING, STOPPED}
+    public enum Status {RUNNING, STOPPED};;
+
+    private long getThreeDaysAgo() {
+        return daysAgo(3);
+    }
 
     private long daysAgo(int daysPast) {
         final Calendar cal = Calendar.getInstance();
@@ -135,7 +229,5 @@ public class ReplicationEngine {
         return (cal.getTime()).getTime();
     }
 
-    private long getThreeDaysAgo() {
-        return daysAgo(3);
-    }
+
 }

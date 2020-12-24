@@ -1,12 +1,15 @@
 package com.neo4j.sync.procedures;
 
 import com.neo4j.sync.engine.ReplicationEngine;
+import com.neo4j.sync.engine.TransactionFileLogger;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.*;
 
+import java.io.IOException;
+import java.sql.Date;
 import java.util.stream.Stream;
 
 public class StartAndStopReplicationProcedures {
@@ -38,6 +41,11 @@ public class StartAndStopReplicationProcedures {
     @Description("returns whether the replication engine is running on this server.")
     public Stream<Output> replicationStatus() {
         Output output = new Output(ReplicationEngine.instance().status());
+        try {
+            TransactionFileLogger.AppendPollingLog("Procedure starting: " + new Date(System.currentTimeMillis()));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return Stream.of(output);
     }
 
