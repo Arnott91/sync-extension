@@ -33,7 +33,7 @@ import java.util.concurrent.Executors;
  * @author Chris Upkes
  * @author Jim Webber
  */
-public class AuditTransactionEventListenerAdapter implements TransactionEventListener<Node> {
+public class CaptureTransactionEventListenerAdapter implements TransactionEventListener<Node> {
     public static final String LOCAL_TX = "LocalTx";
 
     //public static final String INTEGRATION_DATABASE = "INTEGRATION.DATABASE";

@@ -6,7 +6,7 @@ import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.sync.engine.GraphWriter;
 import com.neo4j.sync.engine.TransactionHistoryManager;
-import com.neo4j.sync.listener.AuditTransactionEventListenerAdapter;
+import com.neo4j.sync.listener.CaptureTransactionEventListenerAdapter;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -47,7 +47,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             .withSharedCoreParam(CausalClusteringSettings.minimum_core_cluster_size_at_formation, "3")
             .withNumberOfReadReplicas(0);
 
-    private AuditTransactionEventListenerAdapter listener;
+    private CaptureTransactionEventListenerAdapter listener;
 
     @BeforeEach
     void setup() throws Exception {
@@ -57,7 +57,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
         targetCluster = clusterFactory.createCluster(clusterConfig);
         targetCluster.start();
 
-        listener = new AuditTransactionEventListenerAdapter();
+        listener = new CaptureTransactionEventListenerAdapter();
 
         for (CoreClusterMember coreMember : sourceCluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);

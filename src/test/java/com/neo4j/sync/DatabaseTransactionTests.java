@@ -7,7 +7,7 @@ import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.fabric.shaded.driver.GraphDatabase;
 import com.neo4j.sync.engine.GraphWriter;
 import com.neo4j.sync.engine.TransactionDataParser;
-import com.neo4j.sync.listener.AuditTransactionEventListenerAdapter;
+import com.neo4j.sync.listener.CaptureTransactionEventListenerAdapter;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
@@ -49,7 +49,7 @@ public class DatabaseTransactionTests {
     @Test
     void createNodesTest() throws Exception {
         // Do work here
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -65,7 +65,7 @@ public class DatabaseTransactionTests {
     @Test
     void mergeNewNodeTest() throws Exception {
         // Do work here
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -80,7 +80,7 @@ public class DatabaseTransactionTests {
     @Test
     void addNodePropertiesTest() throws Exception {
         // Do work here
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -101,7 +101,7 @@ public class DatabaseTransactionTests {
     @Test
     void mergeExistingNodeTest() throws Exception {
         // Do work here
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -122,7 +122,7 @@ public class DatabaseTransactionTests {
     @Test
     void createNodesAndRelationshipTest() throws Exception {
         // Do work here
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -139,7 +139,7 @@ public class DatabaseTransactionTests {
     @Test
     void createMultipleRelationshipsTest() throws Exception {
         // Do work here
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -157,7 +157,7 @@ public class DatabaseTransactionTests {
     @Test
     void addRelationshipsPropertiesTest() throws Exception {
         // Do work here
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -176,7 +176,7 @@ public class DatabaseTransactionTests {
     @Test
     void deleteRelationshipsTest() throws Exception {
         // Do work here
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -203,7 +203,7 @@ public class DatabaseTransactionTests {
     @Test
     void deleteExistingNodeTest() throws Exception {
         // Do work here
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -224,7 +224,7 @@ public class DatabaseTransactionTests {
     @Test
     void deleteDetachExistingNodeTest() throws Exception {
         // Do work here
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -245,7 +245,7 @@ public class DatabaseTransactionTests {
     @Test
     void deleteRelationshipTest() throws Exception {
         // Do work here
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -266,7 +266,7 @@ public class DatabaseTransactionTests {
     @Test
     void changeNodePropertyTest() throws Exception {
         // Do work here
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
 //        for (CoreClusterMember coreMember : cluster.coreMembers()) {
 //            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
 //        }
@@ -288,7 +288,7 @@ public class DatabaseTransactionTests {
     @Test
     void removeNodePropertyTest() throws Exception {
         // Do work here
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -310,7 +310,7 @@ public class DatabaseTransactionTests {
     @Test
     void NodePropertyChangeTest2() throws Exception {
         // Do work here
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -332,7 +332,7 @@ public class DatabaseTransactionTests {
     @Test
     void RelationPropertyChangeTest() throws Exception {
         // Do work here
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -355,7 +355,7 @@ public class DatabaseTransactionTests {
     void graphWriterAddNodeTest() throws Exception {
         // Do work here
         String ADD_NODE = "{\"transactionEvents\":[{\"changeType\":\"AddNode\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":null,\"targetNodeLabels\":null,\"targetPrimaryKey\":null,\"properties\":null,\"allProperties\":{\"uuid\":\"123XYZ\"},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -372,7 +372,7 @@ public class DatabaseTransactionTests {
     void graphWriterDeleteNodeTest() throws Exception {
         // Do work here
         String DELETE_NODE = "{\"transactionEvents\":[{\"changeType\":\"DeleteNode\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":null,\"targetNodeLabels\":null,\"targetPrimaryKey\":null,\"properties\":null,\"allProperties\":{\"uuid\":\"123XYZ\"},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -389,7 +389,7 @@ public class DatabaseTransactionTests {
     void graphWriterPropertyChangeTest() throws Exception {
         // Do work here
         String ADD_NODE = "{\"transactionEvents\":[{\"changeType\":\"NodePropertyChange\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":null,\"targetNodeLabels\":null,\"targetPrimaryKey\":null,\"properties\":[{\"propertyName\":\"name\",\"oldValue\":null,\"newValue\":\"foo\"}],\"allProperties\":{\"name\":\"foo\",\"uuid\":\"123XYZ\"},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -406,7 +406,7 @@ public class DatabaseTransactionTests {
     void graphWriterRemovePropertiesTest() throws Exception {
         // Do work here
         String ADD_NODE = "{\"transactionEvents\":[{\"changeType\":\"AddNode\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":null,\"targetNodeLabels\":null,\"targetPrimaryKey\":null,\"properties\":null,\"allProperties\":{\"uuid\":\"123XYZ\"},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -423,7 +423,7 @@ public class DatabaseTransactionTests {
     void graphWriterAddRelationTest() throws Exception {
         // Do work here
         String ADD_NODE = "{\"transactionEvents\":[{\"changeType\":\"AddRelation\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":\"CONNECTED_TO\",\"targetNodeLabels\":[\"Test\"],\"targetPrimaryKey\":{\"uuid\":\"XYZ123\"},\"properties\":null,\"allProperties\":{},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null},{\"changeType\":\"AddNode\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":null,\"targetNodeLabels\":null,\"targetPrimaryKey\":null,\"properties\":null,\"allProperties\":{\"uuid\":\"123XYZ\"},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null},{\"changeType\":\"AddNode\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"XYZ123\"},\"nodeKey\":null,\"relationshipLabel\":null,\"targetNodeLabels\":null,\"targetPrimaryKey\":null,\"properties\":null,\"allProperties\":{\"uuid\":\"XYZ123\"},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -440,7 +440,7 @@ public class DatabaseTransactionTests {
     void graphWriterAddRelationPropertiesTest() throws Exception {
         // Do work here
         String ADD_NODE = "{\"transactionEvents\":[{\"changeType\":\"AddNode\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":null,\"targetNodeLabels\":null,\"targetPrimaryKey\":null,\"properties\":null,\"allProperties\":{\"uuid\":\"123XYZ\"},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -457,7 +457,7 @@ public class DatabaseTransactionTests {
     void graphWriterRemoveRelationPropertiesTest() throws Exception {
         // Do work here
         String ADD_NODE = "{\"transactionEvents\":[{\"changeType\":\"AddNode\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":null,\"targetNodeLabels\":null,\"targetPrimaryKey\":null,\"properties\":null,\"allProperties\":{\"uuid\":\"123XYZ\"},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -488,7 +488,7 @@ public class DatabaseTransactionTests {
                 "ON CREATE SET e += {TimestampModified: tm, UUID: randomUUID()}\n" +
                 "ON MATCH SET e += {TimestampModified: tm};";
 
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -515,7 +515,7 @@ public class DatabaseTransactionTests {
                 "ON CREATE SET e += {TimestampModified: tm, UUID: randomUUID()}\n" +
                 "ON MATCH SET e += {TimestampModified: tm};";
 
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -541,7 +541,7 @@ public class DatabaseTransactionTests {
                 "ON CREATE SET e += {TimestampModified: tm, UUID: randomUUID()}\n" +
                 "ON MATCH SET e += {TimestampModified: tm};";
 
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
@@ -568,7 +568,7 @@ public class DatabaseTransactionTests {
                 "ON CREATE SET e += {TimestampModified: tm, UUID: randomUUID()}\n" +
                 "ON MATCH SET e += {TimestampModified: tm};";
 
-        AuditTransactionEventListenerAdapter listener = new AuditTransactionEventListenerAdapter();
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
         for (CoreClusterMember coreMember : cluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }

@@ -1,6 +1,6 @@
 package com.neo4j.sync.start;
 
-import com.neo4j.sync.listener.AuditTransactionEventListenerAdapter;
+import com.neo4j.sync.listener.CaptureTransactionEventListenerAdapter;
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -22,7 +22,7 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
 {
     public SyncExtensionFactory()
     {
-        super(ExtensionType.DATABASE, "AuditTransactionEventListenerAdapter");
+        super(ExtensionType.DATABASE, "CaptureTransactionEventListenerAdapter");
     }
     @Override
     public Lifecycle newInstance(final ExtensionContext extensionContext, final Dependencies dependencies)
@@ -30,7 +30,7 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
         final GraphDatabaseAPI db = dependencies.graphdatabaseAPI();
         final LogService log = dependencies.log();
         final DatabaseManagementService databaseManagementService = dependencies.databaseManagementService();
-        return new CustomGraphDatabaseLifecycle(log, db, dependencies, databaseManagementService);
+        return new SynchronizedGraphDatabaseLifecycle(log, db, dependencies, databaseManagementService);
     }
     interface Dependencies
     {
@@ -39,7 +39,7 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
         AvailabilityGuard availabilityGuard();
         LogService log();
     }
-    public static class CustomGraphDatabaseLifecycle extends LifecycleAdapter
+    public static class SynchronizedGraphDatabaseLifecycle extends LifecycleAdapter
     {
         private static Dependencies DEPENDENCIES = null;
         private static DatabaseManagementService DBMS;
@@ -49,7 +49,7 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
         private final Dependencies dependencies;
         private final LogService log;
         private final DatabaseManagementService databaseManagementService;
-        AuditTransactionEventListenerAdapter listener;
+        CaptureTransactionEventListenerAdapter listener;
 
         public static GraphDatabaseService getDatabase(String databaseName) {
             GraphDatabaseService db = DEPENDENCIES.databaseManagementService().database(databaseName);
@@ -61,7 +61,7 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
         }
 
 
-        public CustomGraphDatabaseLifecycle(final LogService log, final GraphDatabaseAPI db, final Dependencies dependencies,final DatabaseManagementService databaseManagementService)
+        public SynchronizedGraphDatabaseLifecycle(final LogService log, final GraphDatabaseAPI db, final Dependencies dependencies,final DatabaseManagementService databaseManagementService)
         {
             this.log = log;
             this.db1 = db;
@@ -93,7 +93,7 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
             System.out.println("calling the start method in the new lifecycle adapter");
 //            if (this.db.databaseName().equalsIgnoreCase("neo4j")) {
 //                System.out.println("registering the listener with the default database");
-//                this.listener = new AuditTransactionEventListenerAdapter();
+//                this.listener = new CaptureTransactionEventListenerAdapter();
 //                this.databaseManagementService.registerTransactionEventListener(this.db.databaseName(), this.listener);
 //            }
         }
