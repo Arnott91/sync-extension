@@ -40,6 +40,7 @@ public class ReplicationEngine {
     private static ReplicationEngine instance;
     private Status status;
     private static int runcount = 0;
+    private int records = 0;
 
     private ReplicationEngine(Driver driver) {
         this.driver = driver;
@@ -95,7 +96,7 @@ public class ReplicationEngine {
                 runReplication.forEachRemaining((a) -> {
                     try {
                         replicate(a);
-                        TransactionFileLogger.AppendPollingLog("Polling source: " + new Date(System.currentTimeMillis()));
+                        TransactionFileLogger.AppendPollingLog(String.format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()));
 
                     } catch (JSONException | IOException e) {
                         e.printStackTrace();
@@ -113,7 +114,7 @@ public class ReplicationEngine {
            // we can log the number of transactions pruned when we implement logging
 
             try {
-                TransactionFileLogger.AppendPollingLog("Polling stopping: " + new Date(System.currentTimeMillis()));
+                TransactionFileLogger.AppendPollingLog(String.format("Polling stopping: %d", new Date(System.currentTimeMillis()).getTime()));
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -135,7 +136,7 @@ public class ReplicationEngine {
             runcount ++;
 
             try {
-                TransactionFileLogger.AppendPollingLog("Polling starting: " + new Date(System.currentTimeMillis()));
+                TransactionFileLogger.AppendPollingLog(String.format("Polling starting: %d", new Date(System.currentTimeMillis()).getTime()));
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -144,19 +145,23 @@ public class ReplicationEngine {
             System.out.println("Grabbed the last timestamp");
             // next go and grab the transaction records from the remote database
             Result runReplication = driver.session().run(format(REPLICATION_QUERY, lastTransactionTimestamp));
-            try {
-                runReplication.forEachRemaining((a) -> {
-                            try {
-                                replicate(a);
-                                TransactionFileLogger.AppendPollingLog("Polling source: " + new Date(System.currentTimeMillis()));
 
-                            } catch (JSONException | IOException e) {
-                                e.printStackTrace();
+            if (runReplication.hasNext()) {
+                try {
+                    runReplication.forEachRemaining((a) -> {
+                                try {
+                                    replicate(a);
+                                    TransactionFileLogger.AppendPollingLog(String.format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()));
+
+
+                                } catch (JSONException | IOException e) {
+                                    e.printStackTrace();
+                                }
                             }
-                        }
-                );
-            } catch (Exception e) {
-                e.printStackTrace();
+                    );
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
 
             // I assume we can run to sessions back to back on the same thread in this scheduler.
@@ -166,10 +171,12 @@ public class ReplicationEngine {
             // we can log the number of transactions pruned when we implement logging
 
             try {
-                TransactionFileLogger.AppendPollingLog("Polling stopping: " + new Date(System.currentTimeMillis()));
+                TransactionFileLogger.AppendPollingLog(String.format("Polling stopping: %d", new Date(System.currentTimeMillis()).getTime()));
+                TransactionFileLogger.AppendPollingLog("Records written since engine start: " + this.records);
             } catch (IOException e) {
                 e.printStackTrace();
             }
+
 
 
 
@@ -195,13 +202,23 @@ public class ReplicationEngine {
     private Consumer<? super Record> replicate(Record record) throws JSONException {
 
         // grab the transaction JSON data from the TransactionRecord node
-        Value transactionData = record.get("tr.transactionData");
+        String transactionData = record.get("tr.transactionData").asString();
         // grab the timestamp from the TransactionRecord node
         Value transactionTime = record.get("tr.timeCreated");
+        //GraphWriter graphWriter = new GraphWriter(transactionData.asString(), this.gds, log);
+        //graphWriter.executeCRUDOperation();
 
-        GraphWriter graphWriter = new GraphWriter(transactionData.asString(), this.gds, log);
-        graphWriter.executeCRUDOperation();
+        try  (org.neo4j.graphdb.Transaction tx = gds.beginTx()) {
+            TransactionDataHandler txHandler = new TransactionDataHandler(transactionData,tx);
+            txHandler.executeCRUDOperation();
+        } catch (Exception e) {
+            System.out.printf("Exception: %s%n", e.getMessage());
+        } finally {
+            System.out.println("completed replication tx");
+        }
+
         TransactionHistoryManager.setLastReplicationTimestamp(gds,transactionTime.asLong());
+        this.records ++;
 
         return null;
     }
