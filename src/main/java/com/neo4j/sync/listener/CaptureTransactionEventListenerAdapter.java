@@ -53,11 +53,13 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
     @Override
     public Node beforeCommit(TransactionData data, Transaction transaction, GraphDatabaseService sourceDatabase)
             throws Exception {
+        // I think the nested ifs are easier to read.
+        if (!data.deletedNodes().iterator().hasNext() || !data.deletedRelationships().iterator().hasNext()) {
 
-        if (!data.assignedLabels().iterator().hasNext() || !data.assignedNodeProperties().iterator().hasNext()) {
-           return null;
+            if (!data.assignedLabels().iterator().hasNext() || !data.assignedNodeProperties().iterator().hasNext()) {
+                return null;
+            }
         }
-
 
 
 

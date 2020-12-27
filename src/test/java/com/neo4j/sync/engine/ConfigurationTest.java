@@ -56,6 +56,7 @@ class ConfigurationTest {
         assertEquals(Configuration.getBatchSize(true), 100);
         System.out.println(Configuration.getBatchSize());
 
+
     }
 
     ConfigurationTest() throws IOException {

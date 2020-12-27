@@ -83,7 +83,7 @@ public class ReplicationEngineTests {
     }
 
     @Test
-    public void start2Test() throws Exception {
+    public void start2Test1() throws Exception {
 
         try (Driver driver = driver(new URI("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
 
@@ -92,6 +92,32 @@ public class ReplicationEngineTests {
             assertEquals(1, result.list().size());
 
         }
+
+        CoreClusterMember leader = targetCluster.awaitLeader();
+        GraphDatabaseFacade defaultDB = leader.defaultDatabase();
+
+        ReplicationEngine engine = ReplicationEngine.initialize("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress(), "neo4j", "password", defaultDB);
+
+        engine.start2();
+
+
+    }
+
+    @Test
+    public void start2Test2() throws Exception {
+
+        try (Driver driver = driver(new URI("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
+
+            Session session = driver.session(SessionConfig.builder().withDatabase(DEFAULT_DATABASE_NAME).build());
+            Result result = session.run("CREATE (p:Person {uuid:'Rosa'})-[:FOLLOWS]->(:Person {uuid:'Karl'}) RETURN p");
+            assertEquals(1, result.list().size());
+
+            result = session.run("MATCH (p:Person {uuid:'Rosa'}) DETACH DELETE p");
+            assertEquals(0, result.list().size());
+
+        }
+
+
 
         CoreClusterMember leader = targetCluster.awaitLeader();
         GraphDatabaseFacade defaultDB = leader.defaultDatabase();
