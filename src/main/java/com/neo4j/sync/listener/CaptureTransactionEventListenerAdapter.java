@@ -1,7 +1,6 @@
 package com.neo4j.sync.listener;
 
 
-
 import com.neo4j.sync.engine.TransactionFileLogger;
 import com.neo4j.sync.engine.TransactionRecord;
 import com.neo4j.sync.engine.TransactionRecorder;
@@ -15,10 +14,6 @@ import org.neo4j.graphdb.event.TransactionEventListener;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 
 
 /**
@@ -58,6 +53,10 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
     @Override
     public Node beforeCommit(TransactionData data, Transaction transaction, GraphDatabaseService sourceDatabase)
             throws Exception {
+
+        if (!data.assignedLabels().iterator().hasNext() || !data.assignedNodeProperties().iterator().hasNext()) {
+           return null;
+        }
 
 
 
@@ -131,6 +130,8 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
     public void afterCommit(TransactionData data, Node startNode, GraphDatabaseService sourceDatabase) {
         // log our committed transactions to the transaction log.
         // we can then compare any written nodes in the transaction log that also exist in the rollback logs.
+
+
 
 
         if (logTransaction) {

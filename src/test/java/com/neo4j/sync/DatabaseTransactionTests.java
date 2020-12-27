@@ -579,4 +579,38 @@ public class DatabaseTransactionTests {
             tx.commit();
         });
     }
+
+    @Test
+    void noLabelsTest() throws Exception {
+        // Do work here
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx((db, tx) ->
+        {
+            tx.execute("CREATE (t {uuid:'123XYZ'})-[:CONNECTED_TO]->(t2 {uuid:'XYZ123'})");
+            tx.commit();
+        });
+
+
+    }
+
+    @Test
+    void noPropertiesTest() throws Exception {
+        // Do work here
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx((db, tx) ->
+        {
+            tx.execute("CREATE (t:Test)-[:CONNECTED_TO]->(t2:Test)");
+            tx.commit();
+        });
+
+
+    }
 }
