@@ -39,12 +39,13 @@ public class ReplicationEngine {
 
     private static ReplicationEngine instance;
     private Status status;
-    private static int runcount = 0;
+    private static int runCount = 0;
     private int records = 0;
 
     private ReplicationEngine(Driver driver) {
         this.driver = driver;
         this.execService = Executors.newScheduledThreadPool(1);
+
     }
 
     private ReplicationEngine(Driver driver, GraphDatabaseService gds) {
@@ -133,7 +134,7 @@ public class ReplicationEngine {
         ScheduledExecutorService ses = Executors.newScheduledThreadPool(1);
 
         Runnable replicationTask = () -> {
-            runcount ++;
+            runCount ++;
 
             try {
                 TransactionFileLogger.AppendPollingLog(String.format("Polling starting: %d", new Date(System.currentTimeMillis()).getTime()));
@@ -184,9 +185,9 @@ public class ReplicationEngine {
         ScheduledFuture<?> scheduledFuture = ses.scheduleAtFixedRate(replicationTask, 5, 60, TimeUnit.SECONDS);
 
         while (true) {
-            System.out.println("runcount :" + runcount);
+            System.out.println("run count :" + runCount);
             Thread.sleep(10000);
-            if (runcount == 5) {
+            if (runCount == 5) {
                 System.out.println("Count is 5, cancel the scheduledFuture!");
                 scheduledFuture.cancel(true);
                 ses.shutdown();
