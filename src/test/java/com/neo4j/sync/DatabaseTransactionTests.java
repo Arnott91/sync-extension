@@ -16,9 +16,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.test.extension.Inject;
 
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
@@ -612,5 +618,26 @@ public class DatabaseTransactionTests {
         });
 
 
+    }
+
+    @Test
+    void addUserTest1() throws Exception {
+        // passed
+        assertNotNull(cluster);
+
+        GraphDatabaseAPI graphDb = cluster.awaitLeader().database("SYSTEM");
+
+        graphDb.executeTransactionally("CREATE USER jake IF NOT EXISTS SET PASSWORD 'xyz'");
+
+        Transaction tx = graphDb.beginTx();
+
+        try (Result result = tx.execute("SHOW USERS YIELD user as username");) {
+            while (result.hasNext()) {
+                Map<String, Object> row = result.next();
+                for (String key : result.columns()) {
+                    System.out.printf("%s = %s%n", key, row.get(key));
+                }
+            }
+        }
     }
 }

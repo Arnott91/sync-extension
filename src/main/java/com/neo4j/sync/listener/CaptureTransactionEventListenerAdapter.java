@@ -1,6 +1,7 @@
 package com.neo4j.sync.listener;
 
 
+import com.neo4j.sync.engine.ReplicationJudge;
 import com.neo4j.sync.engine.TransactionFileLogger;
 import com.neo4j.sync.engine.TransactionRecord;
 import com.neo4j.sync.engine.TransactionRecorder;
@@ -54,12 +55,7 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
     public Node beforeCommit(TransactionData data, Transaction transaction, GraphDatabaseService sourceDatabase)
             throws Exception {
         // I think the nested ifs are easier to read.
-        if (!data.deletedNodes().iterator().hasNext() || !data.deletedRelationships().iterator().hasNext()) {
 
-            if (!data.assignedLabels().iterator().hasNext() || !data.assignedNodeProperties().iterator().hasNext()) {
-                return null;
-            }
-        }
 
 
 
@@ -68,6 +64,11 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
         // and populate a transaction record that we can use to both write a TransactionRecord node to the
         // local database and also to log the transaction in any of the logs.
         System.out.println("In the beforeCommit method of our event listener");
+
+        if (!ReplicationJudge.approved(data)) {
+
+            return null;
+        }
 
 
 

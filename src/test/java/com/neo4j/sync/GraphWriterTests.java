@@ -8,11 +8,14 @@ import org.codehaus.jettison.json.JSONObject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.mockito.internal.verification.InOrderWrapper;
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.*;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.test.extension.ImpermanentDbmsExtension;
 import org.neo4j.test.extension.Inject;
+
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
@@ -84,6 +87,9 @@ public class GraphWriterTests {
         newNodes.forEach(node -> assertTrue(node.hasRelationship(RelationshipType.withName((TEST_REL_TYPE)))));
 
         tx.commit();
+
+
+
     }
 
     @Test
@@ -210,6 +216,32 @@ public class GraphWriterTests {
         }
         // check to see if the relationships have the right properties and values.
         tx.commit();
+    }
+
+    @Test
+    void addUserTest1() throws Exception
+    {
+        // passed
+        assertNotNull(graphDatabaseAPI);
+
+        graphDatabaseAPI.executeTransactionally("CREATE USER jake IF NOT EXISTS SET PASSWORD 'xyz'");
+
+        Transaction tx = graphDatabaseAPI.beginTx();
+
+        try ( Result result = tx.execute("SHOW USERS YIELD user as username"); )
+        {
+            while ( result.hasNext() )
+            {
+                Map<String, Object> row = result.next();
+                for ( String key : result.columns() )
+                {
+                    System.out.printf( "%s = %s%n", key, row.get( key ) );
+                }
+            }
+        }
+
+
+
     }
 
 

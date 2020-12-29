@@ -10,6 +10,7 @@
     <packaging>jar</packaging>
 
 
+
     <dependencies>
         <dependency>
             <groupId>eu.michael-simons.neo4j</groupId>
@@ -85,7 +86,7 @@
             <version>0.11.2</version>
             <scope>runtime</scope>
         </dependency>
-    </dependencies>
+      </dependencies>
 
     <build>
         <plugins>
