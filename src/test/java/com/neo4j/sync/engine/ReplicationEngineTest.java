@@ -14,13 +14,15 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class ReplicationEngineTest {
 
+    public static final String NEO_4_J_REMOTE_URI = "neo4j://x.example.com:7687";
     @Inject
     public GraphDatabaseAPI graphDatabaseAPI;
+    String[] hostNames = {"a","b","c"};
 
     @Test
     public void shouldStartAndStopReplication() {
         // Given
-        ReplicationEngine engine = ReplicationEngine.initialize("neo4j://remoteUri", "username", "password");
+        ReplicationEngine engine = ReplicationEngine.initialize(NEO_4_J_REMOTE_URI, "username", "password", hostNames);
 
         // When
         engine.start();
@@ -38,7 +40,7 @@ public class ReplicationEngineTest {
     @Test
     public void shouldBeAbleToRestart() {
         // Given
-        ReplicationEngine engine = ReplicationEngine.initialize("neo4j://remoteUri", "username", "password");
+        ReplicationEngine engine = ReplicationEngine.initialize(NEO_4_J_REMOTE_URI, "username", "password", hostNames);
 
         // When
         engine.start();
@@ -52,7 +54,7 @@ public class ReplicationEngineTest {
     @Test
     public void startShouldBeIdempotent() {
         // Given
-        ReplicationEngine engine = ReplicationEngine.initialize("neo4j://remoteUri", "username", "password");
+        ReplicationEngine engine = ReplicationEngine.initialize(NEO_4_J_REMOTE_URI, "username", "password", hostNames);
 
         // When
         engine.start();
@@ -65,7 +67,7 @@ public class ReplicationEngineTest {
     @Test
     public void stopShouldBeIdempotent() {
         // Given
-        ReplicationEngine engine = ReplicationEngine.initialize("neo4j://remoteUri", "username", "password");
+        ReplicationEngine engine = ReplicationEngine.initialize(NEO_4_J_REMOTE_URI, "username", "password", hostNames);
 
         // When
         engine.stop();
@@ -81,7 +83,7 @@ public class ReplicationEngineTest {
     public void shouldBeLogging() throws Exception{
         // Given
         assertNotNull(graphDatabaseAPI);
-        ReplicationEngine engine = ReplicationEngine.initialize("neo4j://remoteUri", "username", "password", graphDatabaseAPI);
+        ReplicationEngine engine = ReplicationEngine.initialize(NEO_4_J_REMOTE_URI, "username", "password", graphDatabaseAPI, hostNames);
 
         // When
         engine.start2();

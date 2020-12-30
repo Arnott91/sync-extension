@@ -96,6 +96,7 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
             // has set poling enabled.  Polling enabled settting must persist
             // aftter system termination
 
+
             System.out.println("calling the start method in the new lifecycle adapter");
 //            if (this.db.databaseName().equalsIgnoreCase("neo4j")) {
 //                System.out.println("registering the listener with the default database");

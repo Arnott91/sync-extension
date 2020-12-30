@@ -1,15 +1,18 @@
 package com.neo4j.sync.procedures;
 
+import com.neo4j.sync.engine.AddressResolver;
 import com.neo4j.sync.engine.ReplicationEngine;
 import com.neo4j.sync.engine.TransactionFileLogger;
-import org.neo4j.driver.AuthTokens;
-import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
+import org.neo4j.codegen.api.Add;
+import org.neo4j.driver.*;
+import org.neo4j.driver.net.ServerAddress;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.*;
 
 import java.io.IOException;
 import java.sql.Date;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.stream.Stream;
 
 public class StartAndStopReplicationProcedures {
@@ -19,15 +22,39 @@ public class StartAndStopReplicationProcedures {
     @Procedure(name = "startReplication", mode = Mode.WRITE)
     @Description("starts the bilateral replication engine on this server.")
     public synchronized void startReplication(
-            @Name(value = "remoteDatabaseURI") String remoteDatabaseURI,
+            @Name(value = "virtualRemoteDatabaseURI1") String virtualRemoteDatabaseURI1,
+            @Name(value = "hostName1") String hostName1,
+            @Name(value = "hostName2") String hostName2,
+            @Name(value = "hostName3") String hostName3,
             @Name(value = "username") String username,
             @Name(value = "password") String password) {
 
-            Driver driver = GraphDatabase.driver( remoteDatabaseURI, AuthTokens.basic( username, password ) );
-            driver.verifyConnectivity();
-            ReplicationEngine.initialize(remoteDatabaseURI, username, password).start();
+            String[] hostNames = new String[3];
+            hostNames[0] = hostName1;
+            hostNames[1] = hostName2;
+            hostNames[2] = hostName3;
 
-        log.info("Replication from %s started.", remoteDatabaseURI);
+
+
+            Driver driver = AddressResolver.createDriver(virtualRemoteDatabaseURI1, username, password, hostNames);
+            ReplicationEngine.initialize(virtualRemoteDatabaseURI1, username, password, hostNames).start();
+
+        log.info("Replication from %s started.", virtualRemoteDatabaseURI1);
+    }
+
+    public synchronized void startReplication(
+            @Name(value = "virtualRemoteDatabaseURI1") String virtualRemoteDatabaseURI1,
+            @Name(value = "hostNames") String[] hostNames,
+            @Name(value = "username") String username,
+            @Name(value = "password") String password) {
+
+
+
+
+                Driver driver = AddressResolver.createDriver(virtualRemoteDatabaseURI1, username, password, hostNames);
+        ReplicationEngine.initialize(virtualRemoteDatabaseURI1, username, password, hostNames).start();
+
+        log.info("Replication from %s started.", virtualRemoteDatabaseURI1);
     }
 
     @Procedure(name = "stopReplication", mode = Mode.WRITE)
@@ -56,4 +83,8 @@ public class StartAndStopReplicationProcedures {
             this.status = status.toString().toLowerCase();
         }
     }
+
+
+
+
 }

@@ -1,6 +1,7 @@
 package com.neo4j.sync.engine;
 
 import org.codehaus.jettison.json.JSONException;
+import org.neo4j.codegen.api.Add;
 import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -54,13 +55,24 @@ public class ReplicationEngine {
         this.gds = gds;
     }
 
-    public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password) {
+    public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, String[] hostNames) {
         if (instance != null) {
             instance.stop();
         }
 
         instance = new ReplicationEngine(
-                GraphDatabase.driver(remoteDatabaseURI, AuthTokens.basic(username, password)));
+                AddressResolver.createDriver(remoteDatabaseURI,username,password, hostNames));
+        return instance();
+
+    }
+
+    public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, GraphDatabaseService gds, String[] hostNames) {
+        if (instance != null) {
+            instance.stop();
+        }
+
+        instance = new ReplicationEngine(
+                AddressResolver.createDriver(remoteDatabaseURI,username,password, hostNames));
         return instance();
 
     }
@@ -71,7 +83,7 @@ public class ReplicationEngine {
         }
 
         instance = new ReplicationEngine(
-                GraphDatabase.driver(remoteDatabaseURI, AuthTokens.basic(username, password)),gds);
+                GraphDatabase.driver( remoteDatabaseURI, AuthTokens.basic( username, password )));
         return instance();
 
     }
