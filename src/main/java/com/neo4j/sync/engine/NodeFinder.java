@@ -22,7 +22,7 @@ public class NodeFinder {
         String[] primaryKey = new String[2];
 
         for (Map.Entry<String, Object> entry : pk.entrySet()) {
-            primaryKey[0] = entry.getValue().toString();
+            primaryKey[0] = entry.getKey();
             primaryKey[1] = entry.getValue().toString();
 
 

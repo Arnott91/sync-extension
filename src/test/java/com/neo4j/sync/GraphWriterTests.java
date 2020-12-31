@@ -68,6 +68,9 @@ public class GraphWriterTests {
         Iterable<Node> newNodes  = () -> tx.findNodes(Label.label(LOCAL_lABEL));
         assertTrue(newNodes.iterator().hasNext());
         newNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
+        ResourceIterator<Node> txRecordNodes = tx.findNodes(Label.label("TransactionRecord"));
+        assertFalse(txRecordNodes.hasNext());
+
 
         tx.commit();
     }
@@ -85,7 +88,8 @@ public class GraphWriterTests {
         assertTrue(newNodes.iterator().hasNext());
         newNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
         newNodes.forEach(node -> assertTrue(node.hasRelationship(RelationshipType.withName((TEST_REL_TYPE)))));
-
+        ResourceIterator<Node> txRecordNodes = tx.findNodes(Label.label("TransactionRecord"));
+        assertFalse(txRecordNodes.hasNext());
         tx.commit();
 
 
@@ -157,39 +161,7 @@ public class GraphWriterTests {
     }
 
 
-    @Test
-    void nodePropertyChangeTest1() throws Exception
-    {
-        // passed
-        assertNotNull(graphDatabaseAPI);
-        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(NODE_PROPERTY_CHANGE);
-        GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI, mock(Log.class));
-        graphWriter.executeCRUDOperation();
-        Transaction tx = graphDatabaseAPI.beginTx();
-        Iterable<Node> changedNodes  = () -> tx.findNodes(Label.label(LOCAL_lABEL));
-        assertTrue(changedNodes.iterator().hasNext());
-        changedNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
-        changedNodes.forEach(node -> assertFalse(node.hasProperty("foo")));
-        tx.commit();
-    }
 
-    @Test
-    void nodePropertyChangeTest2() throws Exception
-    {
-        // untested
-        assertNotNull(graphDatabaseAPI);
-        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(NODE_PROPERTY_CHANGE2);
-        GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI, mock(Log.class));
-        graphWriter.executeCRUDOperation();
-        Transaction tx = graphDatabaseAPI.beginTx();
-        Iterable<Node> changedNodes  = () -> tx.findNodes(Label.label(LOCAL_lABEL));
-        assertTrue(changedNodes.iterator().hasNext());
-        changedNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
-        changedNodes.forEach(node -> assertTrue(node.hasProperty("test")));
-        changedNodes.forEach(node -> assertEquals("bar", node.getProperty("test")));
-        // check to see if the nodes have the right properties and values.
-        tx.commit();
-    }
 
     @Test
     void relPropertyChangeTest1() throws Exception
@@ -218,31 +190,7 @@ public class GraphWriterTests {
         tx.commit();
     }
 
-    @Test
-    void addUserTest1() throws Exception
-    {
-        // passed
-        assertNotNull(graphDatabaseAPI);
 
-        graphDatabaseAPI.executeTransactionally("CREATE USER jake IF NOT EXISTS SET PASSWORD 'xyz'");
-
-        Transaction tx = graphDatabaseAPI.beginTx();
-
-        try ( Result result = tx.execute("SHOW USERS YIELD user as username"); )
-        {
-            while ( result.hasNext() )
-            {
-                Map<String, Object> row = result.next();
-                for ( String key : result.columns() )
-                {
-                    System.out.printf( "%s = %s%n", key, row.get( key ) );
-                }
-            }
-        }
-
-
-
-    }
 
 
 

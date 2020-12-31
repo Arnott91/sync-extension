@@ -11,17 +11,23 @@ import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.*;
+import org.neo4j.configuration.Config;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.*;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.event.DatabaseEventContext;
 import org.neo4j.graphdb.event.DatabaseEventListenerAdapter;
+import org.neo4j.kernel.impl.core.PathProxy;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.Log;
+import org.neo4j.server.configuration.ConfigFileBuilder;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.configuration.*;
 
 import java.net.URI;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Timestamp;
 
 import static org.junit.Assert.assertEquals;
@@ -125,6 +131,17 @@ public class ReplicationEngineTests {
         ReplicationEngine engine = ReplicationEngine.initialize("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress(), "neo4j", "password", defaultDB);
 
         engine.start2();
+
+
+    }
+
+    @Test
+    public void start2Test3() throws Exception {
+
+
+
+
+
 
 
     }

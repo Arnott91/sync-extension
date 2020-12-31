@@ -142,6 +142,8 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             newNodes.forEach(node -> assertTrue(node.hasLabel(Label.label("Person"))));
             newNodes.forEach(node -> assertTrue(node.hasProperty("uuid")));
             newNodes.forEach(node -> assertTrue(node.hasRelationship(RelationshipType.withName("FOLLOWS"))));
+            ResourceIterator<Node> txRecordNodes = tx.findNodes(Label.label("TransactionRecord"));
+            Assertions.assertFalse(txRecordNodes.hasNext());
 
             tx.commit();
 

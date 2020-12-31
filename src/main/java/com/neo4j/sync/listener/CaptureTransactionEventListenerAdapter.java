@@ -1,10 +1,7 @@
 package com.neo4j.sync.listener;
 
 
-import com.neo4j.sync.engine.ReplicationJudge;
-import com.neo4j.sync.engine.TransactionFileLogger;
-import com.neo4j.sync.engine.TransactionRecord;
-import com.neo4j.sync.engine.TransactionRecorder;
+import com.neo4j.sync.engine.*;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -54,7 +51,13 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
     @Override
     public Node beforeCommit(TransactionData data, Transaction transaction, GraphDatabaseService sourceDatabase)
             throws Exception {
-        // I think the nested ifs are easier to read.
+
+
+        // TO_DO:  uncomment below and TEST
+
+        // if (!Configuration.isInitialized()) Configuration.InitializeFromDB(sourceDatabase);
+
+        // if (!TransactionFileLogger.isAreSettingsInitialized()) TransactionFileLogger.initSettings(Configuration.getLogSettings());
 
 
 
@@ -65,26 +68,21 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
         // local database and also to log the transaction in any of the logs.
         System.out.println("In the beforeCommit method of our event listener");
 
-        if (!ReplicationJudge.approved(data)) {
+//        if (!ReplicationJudge.approved(data)) {
+//
+//            return null;
+//        }
+//
+//
+//
+//        // Check to make sure that we the transaction listener wasn't invoked because we committed a
+//        // transactionRecord node to the database.  If the TransactionRecorder encounters
+//        // a node with the TransactionRecord label, it will just return null.
+//
+//        this.replicate = true;
 
-            return null;
-        }
 
-
-
-        // Check to make sure that we the transaction listener wasn't invoked because we committed a
-        // transactionRecord node to the database.  If the TransactionRecorder encounters
-        // a node with the TransactionRecord label, it will just return null.
-
-        this.replicate = true;
-
-        for (LabelEntry label: data.assignedLabels())
-        {
-            if (label.label().name().equals(LOCAL_TX)) this.replicate  = false;
-
-        }
-
-        if (replicate && !this.justUpdatedTr) {
+        if (ReplicationJudge.approved(data) && !this.justUpdatedTr) {
 
             TransactionRecorder txRecorder = new TransactionRecorder(data);
             TransactionRecord txRecord = txRecorder.serializeTransaction();

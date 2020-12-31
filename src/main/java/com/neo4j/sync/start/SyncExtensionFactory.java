@@ -2,8 +2,11 @@ package com.neo4j.sync.start;
 
 import com.neo4j.sync.listener.CaptureTransactionEventListenerAdapter;
 import org.neo4j.annotations.service.ServiceProvider;
+import org.neo4j.configuration.ConfigUtils;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.AvailabilityListener;
 import org.neo4j.kernel.extension.ExtensionFactory;
@@ -13,6 +16,8 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.internal.LogService;
+import org.neo4j.configuration.*;
+
 
 
 
@@ -30,6 +35,7 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
         final GraphDatabaseAPI db = dependencies.graphdatabaseAPI();
         final LogService log = dependencies.log();
         final DatabaseManagementService databaseManagementService = dependencies.databaseManagementService();
+        final AvailabilityGuard availabilityGuard = dependencies.availabilityGuard();
         return new SynchronizedGraphDatabaseLifecycle(log, db, dependencies, databaseManagementService);
     }
     interface Dependencies
@@ -49,6 +55,9 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
         private final Dependencies dependencies;
         private final LogService log;
         private final DatabaseManagementService databaseManagementService;
+        private final AvailabilityGuard availabilityGuard;
+
+
         CaptureTransactionEventListenerAdapter listener;
 
         public static GraphDatabaseService getDatabase(String databaseName) {
@@ -69,6 +78,8 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
             this.databaseManagementService = databaseManagementService;
             DBMS = databaseManagementService;
             this.DEPENDENCIES = dependencies;
+            this.availabilityGuard = dependencies.availabilityGuard();
+
 
 
 
@@ -76,25 +87,26 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
 
         @Override
         public void start() throws Exception {
-//            //log.info("check if auto is enabled and kick off the replication engine");
-//            availabilityGuard.addListener(new AvailabilityListener() {
-//                @Override
-//                public void available() {
-//                    if(autoRestart()) {
-//                        log.info("Do clever stuff here to check if auto mode is engaged and start the replication engine");
-//                    }
-//                }
-//
-//                @Override
-//                public void unavailable() {
-//                    // Do nothing, the dbms is not available.
-//                }
-//            });
+            //log.info("check if auto is enabled and kick off the replication engine");
+            availabilityGuard.addListener(new AvailabilityListener() {
+                @Override
+                public void available() {
+                   System.out.println("Some db is available");
+                }
+
+                @Override
+                public void unavailable() {
+                    // Do nothing, the dbms is not available.
+                    System.out.println("Some db is no longer available");
+                }
+            });
             // TO_DO:
             // by installing the sync jar local replication is enabled.
             // polling is deetermined at database start based on weither the user
             // has set poling enabled.  Polling enabled settting must persist
             // aftter system termination
+
+
 
 
             System.out.println("calling the start method in the new lifecycle adapter");
@@ -103,6 +115,8 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
 //                this.listener = new CaptureTransactionEventListenerAdapter();
 //                this.databaseManagementService.registerTransactionEventListener(this.db.databaseName(), this.listener);
 //            }
+
+
         }
 
         //        private boolean autoRestart() {

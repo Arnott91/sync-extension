@@ -72,7 +72,7 @@ public class ReplicationEngine {
         }
 
         instance = new ReplicationEngine(
-                AddressResolver.createDriver(remoteDatabaseURI,username,password, hostNames));
+                AddressResolver.createDriver(remoteDatabaseURI,username,password, hostNames),gds);
         return instance();
 
     }
@@ -83,7 +83,7 @@ public class ReplicationEngine {
         }
 
         instance = new ReplicationEngine(
-                GraphDatabase.driver( remoteDatabaseURI, AuthTokens.basic( username, password )));
+                GraphDatabase.driver( remoteDatabaseURI, AuthTokens.basic( username, password )), gds);
         return instance();
 
     }
@@ -94,40 +94,50 @@ public class ReplicationEngine {
 
     public synchronized void start() {
         scheduledFuture = execService.scheduleAtFixedRate(() -> {
-            // first, grab the timestamp of the last transaction to be replicated locally.
             try {
-                TransactionFileLogger.AppendPollingLog("Polling starting: " + new Date(System.currentTimeMillis()));
+                TransactionFileLogger.AppendPollingLog(String.format("Polling starting: %d", new Date(System.currentTimeMillis()).getTime()));
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
+            System.out.println("Grabbing the last timestamp");
             this.lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(gds);
-
+            System.out.println("Grabbed the last timestamp");
             // next go and grab the transaction records from the remote database
             Result runReplication = driver.session().run(format(REPLICATION_QUERY, lastTransactionTimestamp));
-            try {
-                runReplication.forEachRemaining((a) -> {
-                    try {
-                        replicate(a);
-                        TransactionFileLogger.AppendPollingLog(String.format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()));
 
-                    } catch (JSONException | IOException e) {
-                        e.printStackTrace();
-                    }
+            if (runReplication.hasNext()) {
+                try {
+                    runReplication.forEachRemaining((a) -> {
+                                try {
+                                    replicate(a);
+                                    TransactionFileLogger.AppendPollingLog(String.format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()));
+
+
+                                } catch (JSONException | IOException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                    );
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-                );
-            } catch (Exception e) {
-                e.printStackTrace();
             }
 
             // I assume we can run to sessions back to back on the same thread in this scheduler.
             // Maybe we can provide more two threads?
+            System.out.println("Starting pruning");
 
             Result runPrune = driver.session().run(format(PRUNE_QUERY, getThreeDaysAgo()));
-           // we can log the number of transactions pruned when we implement logging
+
+            System.out.println(String.format("Pruning complete %d records pruned", runPrune.single().get("deleted").asInt()));
+
+            // we can log the number of transactions pruned when we implement logging
 
             try {
                 TransactionFileLogger.AppendPollingLog(String.format("Polling stopping: %d", new Date(System.currentTimeMillis()).getTime()));
+                TransactionFileLogger.AppendPollingLog("Records written since engine start: " + this.records);
+                TransactionFileLogger.AppendPollingLog("Records pruned: " + runPrune.single().get("deleted").asString());
+
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -179,13 +189,18 @@ public class ReplicationEngine {
 
             // I assume we can run to sessions back to back on the same thread in this scheduler.
             // Maybe we can provide more two threads?
+            System.out.println("Starting pruning");
 
             Result runPrune = driver.session().run(format(PRUNE_QUERY, getThreeDaysAgo()));
+
+            System.out.println(String.format("Pruning complete %d records pruned", runPrune.single().get("deleted").asInt()));
+
             // we can log the number of transactions pruned when we implement logging
 
             try {
                 TransactionFileLogger.AppendPollingLog(String.format("Polling stopping: %d", new Date(System.currentTimeMillis()).getTime()));
                 TransactionFileLogger.AppendPollingLog("Records written since engine start: " + this.records);
+                TransactionFileLogger.AppendPollingLog("Records pruned: " + runPrune.single().get("deleted").asString());
             } catch (IOException e) {
                 e.printStackTrace();
             }
