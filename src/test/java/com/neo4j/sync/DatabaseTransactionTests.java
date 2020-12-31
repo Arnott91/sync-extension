@@ -640,4 +640,32 @@ public class DatabaseTransactionTests {
             }
         }
     }
+
+
+    @Test
+    void createIndexTest() throws Exception {
+        // Do work here
+        CaptureTransactionEventListenerAdapter listener = new CaptureTransactionEventListenerAdapter();
+        for (CoreClusterMember coreMember : cluster.coreMembers()) {
+            coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
+        }
+
+        cluster.coreTx((db, tx) ->
+        {
+            tx.execute("CREATE INDEX my_index FOR (p:Person) ON (p.age)");
+            tx.commit();
+
+        });
+
+        cluster.coreTx((db, tx) ->
+        {
+            tx.execute("CREATE (p:Person {id:1}) set p.age = 22");
+            tx.commit();
+
+        });
+
+
+
+
+    }
 }

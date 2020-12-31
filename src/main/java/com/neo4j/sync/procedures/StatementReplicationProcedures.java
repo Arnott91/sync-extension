@@ -35,6 +35,7 @@ public class StatementReplicationProcedures {
     private final static String TX_RECORD_CREATE_TIME_KEY = "timeCreated";
     private final static String ST_TX_RECORD_LABEL = "StatementRecord";
     private final static String ST_TX_RECORD_TX_DATA_KEY = "transactionStatement";
+    private final static String ST_DATA_JSON = "{\"statement\":\"true\"}";
 
     @Procedure(name = "replicateStatement", mode = Mode.WRITE)
     @Description("commits the statement and creates a StatementRecord for replication.")
@@ -59,6 +60,7 @@ public class StatementReplicationProcedures {
             txRecordNode.setProperty(TX_RECORD_CREATE_TIME_KEY, System.currentTimeMillis());
             txRecordNode.setProperty(TX_RECORD_NODE_BEFORE_COMMIT_KEY, UUID.randomUUID().toString());
             txRecordNode.setProperty(ST_TX_RECORD_TX_DATA_KEY, statement);
+            txRecordNode.setProperty(TX_RECORD_TX_DATA_KEY, ST_DATA_JSON);
             tx.commit();
         } catch (Exception e) {
             //getLog(sourceDatabase).error(e.getMessage(), e);

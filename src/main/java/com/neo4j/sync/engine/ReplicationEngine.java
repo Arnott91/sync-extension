@@ -34,7 +34,7 @@ public class ReplicationEngine {
     private final String LOCAL_TIMESTAMP_QUERY = "MATCH (ltr:LastTransactionReplicated {id:'SINGLETON'}) RETURN ltr.lastTimeRecorded";
     private final String REPLICATION_QUERY = "MATCH (tr:TransactionRecord) " +
             "WHERE tr.timeCreated > %d " +
-            "RETURN tr.uuid, tr.timeCreated, tr.transactionData";
+            "RETURN tr.uuid, tr.timeCreated, tr.transactionData, tr.transactionStatement";
     private final String UPDATE_LAST_TRANSACTION_TIMESTAMP_QUERY = "MERGE (ltr:LastTransactionReplicated {id:'SINGLETON'}) " +
             "SET tr.lastTimeRecorded = %d";
 
@@ -42,6 +42,9 @@ public class ReplicationEngine {
     private Status status;
     private static int runCount = 0;
     private int records = 0;
+
+    private final String ST_DATA_VALUE = "NO_STATEMENT";
+    private final static String ST_DATA_JSON = "{\"statement\":\"true\"}";
 
     private ReplicationEngine(Driver driver) {
         this.driver = driver;
@@ -169,7 +172,8 @@ public class ReplicationEngine {
             // next go and grab the transaction records from the remote database
             Result runReplication = driver.session().run(format(REPLICATION_QUERY, lastTransactionTimestamp));
 
-            if (runReplication.hasNext()) {
+
+            if (runReplication.keys() != null && runReplication.hasNext()) {
                 try {
                     runReplication.forEachRemaining((a) -> {
                                 try {
@@ -229,24 +233,42 @@ public class ReplicationEngine {
 
     private Consumer<? super Record> replicate(Record record) throws JSONException {
 
-        // grab the transaction JSON data from the TransactionRecord node
-        String transactionData = record.get("tr.transactionData").asString();
+
         // grab the timestamp from the TransactionRecord node
         Value transactionTime = record.get("tr.timeCreated");
-        //GraphWriter graphWriter = new GraphWriter(transactionData.asString(), this.gds, log);
-        //graphWriter.executeCRUDOperation();
+        if (!record.get("tr.transactionData").asString().equals(ST_DATA_JSON)) {
 
-        try  (org.neo4j.graphdb.Transaction tx = gds.beginTx()) {
-            TransactionDataHandler txHandler = new TransactionDataHandler(transactionData,tx);
-            txHandler.executeCRUDOperation();
-        } catch (Exception e) {
-            System.out.printf("Exception: %s%n", e.getMessage());
-        } finally {
-            System.out.println("completed replication tx");
+            // grab the transaction JSON data from the Transa)ctionRecord node
+
+            String transactionData = record.get("tr.transactionData").asString();
+
+
+
+
+            try (org.neo4j.graphdb.Transaction tx = gds.beginTx()) {
+                TransactionDataHandler txHandler = new TransactionDataHandler(transactionData, tx);
+                txHandler.executeCRUDOperation();
+                tx.commit();
+            } catch (Exception e) {
+                System.out.printf("Exception: %s%n", e.getMessage());
+            } finally {
+                System.out.println("completed replication tx");
+            }
+
+
+        } else if (!record.get("tr.transactionStatement").asString().equals(ST_DATA_VALUE)) {
+
+            try (org.neo4j.graphdb.Transaction tx = gds.beginTx()) {
+                tx.execute(record.get("tr.transactionStatement").asString());
+            } catch (Exception e) {
+                System.out.printf("Exception: %s%n", e.getMessage());
+            } finally {
+                System.out.println("completed replication tx");
+            }
+
         }
-
-        TransactionHistoryManager.setLastReplicationTimestamp(gds,transactionTime.asLong());
-        this.records ++;
+        TransactionHistoryManager.setLastReplicationTimestamp(gds, transactionTime.asLong());
+        this.records++;
 
         return null;
     }

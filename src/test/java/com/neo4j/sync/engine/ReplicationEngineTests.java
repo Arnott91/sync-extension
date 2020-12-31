@@ -138,6 +138,30 @@ public class ReplicationEngineTests {
     @Test
     public void start2Test3() throws Exception {
 
+        try (Driver driver = driver(new URI("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
+
+            // create test statement record
+            String srQuery = "CREATE (st:TransactionRecord:StatementRecord {uuid:'12314124123'}) " +
+                    "SET st.timeCreated = 123123, st.transactionStatement = 'CREATE INDEX FOR (p:Person) ON (p.name)' " +
+                    "SET st.transactionData = '{\"statement\":\"true\"}'" +
+                    "RETURN count(st)";
+
+            Session session = driver.session(SessionConfig.builder().withDatabase(DEFAULT_DATABASE_NAME).build());
+           assertEquals(1, session.run(srQuery).list().size());
+
+
+
+        }
+
+
+
+        CoreClusterMember leader = targetCluster.awaitLeader();
+        GraphDatabaseFacade defaultDB = leader.defaultDatabase();
+
+        ReplicationEngine engine = ReplicationEngine.initialize("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress(), "neo4j", "password", defaultDB);
+
+        engine.start2();
+
 
 
 

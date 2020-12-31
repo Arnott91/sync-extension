@@ -40,13 +40,13 @@ public class StatementReplicationProcedureTests
             Session session = driver.session();
 
             // And given I have a node in the database
-            session.run( "CALL replicateStatement('CREATE INDEX ON Test(id)')" );
+            session.run( "CALL replicateStatement('CREATE INDEX FOR (p:Person) ON (p.name)')" );
 
             assertEquals(1,session.run( "MATCH (sr:StatementRecord) RETURN count(sr) AS records" )
                     .single()
                     .get( 0 ).asLong());
 
-            assertEquals("CREATE INDEX ON Test(id)",session.run( "MATCH (sr:StatementRecord) RETURN sr.transactionStatement" )
+            assertEquals("CREATE INDEX FOR (p:Person) ON (p.name)",session.run( "MATCH (sr:StatementRecord) RETURN sr.transactionStatement" )
                     .single()
                     .get( 0 ).asString());
 

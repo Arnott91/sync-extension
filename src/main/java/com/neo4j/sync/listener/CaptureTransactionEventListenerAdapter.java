@@ -36,6 +36,8 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
     private final String TX_RECORD_STATUS_KEY = "status";
     private final String TX_RECORD_TX_DATA_KEY = "transactionData";
     private final String TX_RECORD_CREATE_TIME_KEY = "timeCreated";
+    private final String ST_TX_RECORD_TX_DATA_KEY = "transactionStatement";
+    private final String ST_DATA_VALUE = "NO_STATEMENT";
 
     private String beforeCommitTxId;
     private long transactionTimestamp;
@@ -58,6 +60,10 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
         // if (!Configuration.isInitialized()) Configuration.InitializeFromDB(sourceDatabase);
 
         // if (!TransactionFileLogger.isAreSettingsInitialized()) TransactionFileLogger.initSettings(Configuration.getLogSettings());
+
+        //  We can grab index info from the transaction object if we really want to go there.
+        // remember those type of transactions cannot include DML transactions.
+        // System.out.println(transaction.schema().getIndexes().iterator().next().getName());
 
 
 
@@ -107,6 +113,8 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
                 txRecordNode.setProperty(TX_RECORD_CREATE_TIME_KEY, txRecord.getTimestampCreated());
                 txRecordNode.setProperty(TX_RECORD_NODE_BEFORE_COMMIT_KEY, txRecord.getTransactionUUID());
                 txRecordNode.setProperty(TX_RECORD_TX_DATA_KEY, txRecord.getTransactionData());
+                txRecordNode.setProperty(ST_TX_RECORD_TX_DATA_KEY, ST_DATA_VALUE);
+
                 tx.commit();
             } catch (Exception e) {
                 //getLog(sourceDatabase).error(e.getMessage(), e);
