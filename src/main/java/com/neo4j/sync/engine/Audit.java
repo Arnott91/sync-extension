@@ -8,7 +8,7 @@ import java.util.Map;
  * com.neo4j.sync.engine.Audit contains information about changes made to an object. It also contains metadata about who
  * made the change and when.
  *
- * @authors Chris Upkes
+ * @author Ravi Anthapu, Chris Upkes
  */
 
 public class Audit {

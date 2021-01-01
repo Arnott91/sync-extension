@@ -44,7 +44,7 @@ public class TransactionFileLogger {
         }
     }
 
-    private static void initializeTxLogFile(Logtype logtype) throws IOException {
+    private static void initializeTxLogFile(LogType logtype) throws IOException {
 
         String fileFullPath = null;
         File logFile = null;
@@ -141,7 +141,7 @@ public class TransactionFileLogger {
 
     public static void AppendPollingLog(String message) throws IOException {
 
-        initializeTxLogFile(Logtype.TX_POLLING);
+        initializeTxLogFile(LogType.TX_POLLING);
         String pollMessage = message + "\n";
 
         String pollLogFileFullPath =  POLL_LOG_FILE_DIR + "/" + POLLING_LOG;
