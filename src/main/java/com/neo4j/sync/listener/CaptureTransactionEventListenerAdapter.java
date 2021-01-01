@@ -46,66 +46,30 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
     private boolean replicate = true;
     private boolean justUpdatedTr = false;
 
-
-    //private ExecutorService executorService = Executors.newSingleThreadExecutor();
-
-
     @Override
     public Node beforeCommit(TransactionData data, Transaction transaction, GraphDatabaseService sourceDatabase)
             throws Exception {
 
-
-        // TO_DO:  uncomment below and TEST
-
-        // if (!Configuration.isInitialized()) Configuration.InitializeFromDB(sourceDatabase);
-
-        // if (!TransactionFileLogger.isAreSettingsInitialized()) TransactionFileLogger.initSettings(Configuration.getLogSettings());
-
-        //  We can grab index info from the transaction object if we really want to go there.
-        // remember those type of transactions cannot include DML transactions.
+        // REGARDING DDL AND DCL: We can grab index info from the transaction object if we really want to go there.
+        // Remember,  schema transactions cannot include DML transactions.
         // System.out.println(transaction.schema().getIndexes().iterator().next().getName());
 
-
-
-
-
-        // ge a handle to the transaction recorder.  This will grab information from the Transaction Data object
-        // and populate a transaction record that we can use to both write a TransactionRecord node to the
-        // local database and also to log the transaction in any of the logs.
         System.out.println("In the beforeCommit method of our event listener");
 
-//        if (!ReplicationJudge.approved(data)) {
-//
-//            return null;
-//        }
-//
-//
-//
-//        // Check to make sure that we the transaction listener wasn't invoked because we committed a
-//        // transactionRecord node to the database.  If the TransactionRecorder encounters
-//        // a node with the TransactionRecord label, it will just return null.
-//
-//        this.replicate = true;
-
-
         if (ReplicationJudge.approved(data) && !this.justUpdatedTr) {
-
+            // get a handle to the transaction recorder.  This will grab information from the Transaction Data object
+            // and populate a transaction record that we can use to both write a TransactionRecord node to the
+            // local database and also to log the transaction in any of the logs.
             TransactionRecorder txRecorder = new TransactionRecorder(data);
             TransactionRecord txRecord = txRecorder.serializeTransaction();
             // let's grab the uuid of the transaction and a timestamp for logging in afterCommit and rollback
             // methods.
-
             this.beforeCommitTxId = txRecord.getTransactionUUID();
             this.transactionTimestamp = System.currentTimeMillis();
             txData = txRecord.getTransactionData();
 
-
-
-
             // Populate the TransactionRecord node with required transaction replay and history
             // data and write locally.
-
-
             try (Transaction tx = sourceDatabase.beginTx()) {
                 Node txRecordNode = tx.createNode(Label.label(TX_RECORD_LABEL));
                 txRecordNode.addLabel(Label.label(LOCAL_TX));
@@ -117,8 +81,9 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
 
                 tx.commit();
             } catch (Exception e) {
+                // TODO: figure out how to get a working handle to the internal logger.
                 //getLog(sourceDatabase).error(e.getMessage(), e);
-                System.out.println(e.getMessage());
+                e.printStackTrace();
             } finally {
                 logTransaction = true;
 
@@ -142,13 +107,11 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
         // we can then compare any written nodes in the transaction log that also exist in the rollback logs.
 
 
-
-
+        // TODO:  uncomment below and TEST
+        // if (!Configuration.isInitialized()) Configuration.InitializeFromDB(sourceDatabase);
+        // if (!TransactionFileLogger.isAreSettingsInitialized()) TransactionFileLogger.initSettings(Configuration.getLogSettings());
+        // the transaction logging you see below has hard-coded file locations.
         if (logTransaction) {
-
-
-
-
             try {
                 TransactionFileLogger.AppendTransactionLog(txData, beforeCommitTxId, data.getTransactionId(),
                         transactionTimestamp);
@@ -167,7 +130,7 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
                 tx.commit();
             } catch (Exception e) {
                 //getLog(sourceDatabase).error(e.getMessage(), e);
-                System.out.println(e.getMessage());
+                e.printStackTrace();
             }
         }
         System.out.println("In the afterCommit method of our event listener");
@@ -178,7 +141,7 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
     public void afterRollback(TransactionData data, Node startNode, GraphDatabaseService sourceDatabase) {
         // identify transactions that have rolled backed with their transaction UUID values so that we can
         // compare to the transaction log and look for written transaction records that were rolled back.
-
+        // TODO: use the refactored file logger initialized from the database.
         System.out.println("In the afterRollback method of our event listener");
 
         if (replicate) {
@@ -187,7 +150,7 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
             } catch (Exception e) {
                 // log exception
                 //getLog(sourceDatabase).error(e.getMessage(), e);
-                System.out.println(e.getMessage());
+                e.printStackTrace();
             }
         }
     }
