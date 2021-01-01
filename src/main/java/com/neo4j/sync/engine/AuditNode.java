@@ -6,7 +6,8 @@ import org.neo4j.graphdb.Node;
  * com.neo4j.sync.engine.AuditNode contains information about changes made in any transaction. It also contains metadata about who
  * made the change and when.
  *
- * @author Ravi Anthapu, Chris Upkes
+ * @author Ravi Anthapu
+ * @author Chris Upkes
  */
 
 class AuditNode {

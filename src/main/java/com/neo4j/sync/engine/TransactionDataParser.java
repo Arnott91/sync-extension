@@ -1,15 +1,21 @@
 package com.neo4j.sync.engine;
 
-import org.apache.commons.lang3.ArrayUtils;
+
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import scala.util.parsing.json.JSON;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+/**
+ * com.neo4j.sync.engine.TransactionDataParser class is used to decode the JSON transaction data message recorded
+ * by the transaction event listener to a TransactionRecord node in the database.  It is used by both the
+ * GraphWriter and the TransactionDataHandler.
+ *
+ * @author Chris Upkes
+ */
 
 public class TransactionDataParser {
 
@@ -32,14 +38,13 @@ public class TransactionDataParser {
     public static final String CHANGE_TYPE_KEY = "changeType";
     public static final String RELATIONSHIP_LABEL_KEY = "relationshipLabel";
     public static final String TRANSACTION_EVENTS_KEY = "transactionEvents";
-    public static final String REGEX = ",";
     public static final String CHANGED_PROPERTIES_KEY = "properties";
+    public static final String REGEX = ",";
 
 
     public static JSONObject TranslateTransactionData(String transactionData) throws JSONException {
 
         // wrap the JSON data in a JSON object to make it easy to work with
-
         return new JSONObject(transactionData);
 
     }
@@ -49,8 +54,6 @@ public class TransactionDataParser {
         // the JSON object we get from the entire transaction is actually an array of distinct events
         // each defined by change type. So below what we do is grab the events array object
         // and break it up into an array of json objects, each representing a unique event.
-        
-
         JSONArray events = entireTransaction.getJSONArray(TRANSACTION_EVENTS_KEY);
         List<Map<String, JSONObject>> eventsList = new ArrayList<>();
 
@@ -93,8 +96,6 @@ public class TransactionDataParser {
     private static Map<String,Object> getKeyValueComponents(JSONObject event, ParseType parseType) throws JSONException {
 
         // providing a generic "get me key - value pairs" seems like a useful thing.
-
-
         switch (parseType) {
             case NODE_PROPERTIES: return getNodeProperties(event);
             case PRIMARY_KEY: return getPrimaryKey(event);
@@ -111,9 +112,7 @@ public class TransactionDataParser {
     }
     public static Map<String, Object> getPrimaryKey(JSONObject nodeEvent) throws JSONException {
 
-
             return ((JSONObject) nodeEvent.get(PRIMARY_KEY)).toMap();
-
 
     }
 
@@ -128,30 +127,17 @@ public class TransactionDataParser {
 
     }
 
-
-
-
     public static String[] getNodeLabels(JSONObject nodeEvent) throws JSONException {
 
         // add LOCAL_TX label
-
         JSONArray labels = nodeEvent.getJSONArray(ADD_NODE_LABEL_KEY);
         ArrayList<String> transactionLabels = new ArrayList<>();
 
-
-
-
-
-
         for (int i = 0; i < labels.length(); i++) {
-
             transactionLabels.add(labels.get(i).toString());
-
-
         }
         transactionLabels.add(LOCAL_TRANSACTION_LABEL);
        // ArrayUtils..add(transactionLabels, LOCAL_TRANSACTION_LABEL);
-
         return transactionLabels.toArray(new String[transactionLabels.size()]);
 
     }
@@ -161,84 +147,54 @@ public class TransactionDataParser {
         // add LOCAL_TX label
         JSONArray labels = nodeEvent.getJSONArray(TARGET_NODE_LABEL_KEY);
         ArrayList<String> transactionLabels = new ArrayList<>();
-
-
-
-
         for (int i = 0; i < labels.length(); i++) {
-
             transactionLabels.add(labels.get(i).toString());
-
         }
         transactionLabels.add(LOCAL_TRANSACTION_LABEL);
 
-
         return transactionLabels.toArray(new String[transactionLabels.size()]);
-
     }
 
 
     public static String[] getNodeLabels(JSONObject nodeEvent, NodeDirection direction) throws JSONException {
 
-
         switch (direction) {
             case START: return getNodeLabels(nodeEvent);
             case TARGET: return getTargetNodeLabels(nodeEvent);
-
-
         }
         return null;
-
     }
 
     public static Map<String, Object> getChangedProperties(JSONObject event) throws JSONException{
 
-
-
         JSONArray beforeAndAfterArray = event.getJSONArray(CHANGED_PROPERTIES_KEY);
-
         Map<String, Object> changedProperties = new HashMap<>();
-
-
         for (int i = 0; i < beforeAndAfterArray.length(); i++){
-
             JSONObject banda = (JSONObject) beforeAndAfterArray.get(i);
             if (!banda.get(NEW_VALUE).equals(null)) {
                 changedProperties.put(banda.getString(PROPERTIES_KEY), banda.getString(NEW_VALUE));
             }
-
-
         }
         return changedProperties;
-
-
     }
 
     public static String[] getRemovedProperties(JSONObject nodeEvent) throws JSONException {
 
         JSONArray beforeAndAfterArray = nodeEvent.getJSONArray(CHANGED_PROPERTIES_KEY);
-
         List<String> removed = new ArrayList<>();
-
         for (int i = 0; i < beforeAndAfterArray.length(); i++){
-
             JSONObject banda = (JSONObject) beforeAndAfterArray.get(i);
             if (banda.get(NEW_VALUE).equals(null)){
                 removed.add(banda.get(PROPERTIES_KEY).toString());
-
             }
-
-
         }
         return removed.toArray(new String[removed.size()]);
-
     }
 
 
     public static String getRelationType(JSONObject relationEvent) throws JSONException {
 
         // unlike node labels, relationships can have only one type.
-
         return relationEvent.get(RELATIONSHIP_LABEL_KEY).toString();
     }
 

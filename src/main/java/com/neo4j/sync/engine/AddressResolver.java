@@ -14,7 +14,7 @@ import java.util.HashSet;
  * The class encapsulates the logic provided by Neo4j to build and pass configuration information
  * to the driver method of the GraphDatabase object.
  *
- * @Authors Chris Upkes
+ * @author Chris Upkes
  */
 
 public class AddressResolver {

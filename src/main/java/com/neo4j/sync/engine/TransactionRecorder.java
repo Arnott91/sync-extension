@@ -22,13 +22,14 @@ import java.util.Map;
  */
 
 public class TransactionRecorder {
+    public static final String UUID = "uuid";
     private final TransactionData transactionData;
 
     public TransactionRecorder(TransactionData txData) {
         this.transactionData = txData;
     }
 
-   // This method works on the transaction data object passed to the constructor
+    // This method works on the transaction data object passed to the constructor
     // and returns a new transaction record object that can be used
     // to write transaction history as a node locally or to a file
     // or another system.
@@ -46,20 +47,8 @@ public class TransactionRecorder {
             {
                 if (l.name().equalsIgnoreCase("DONT_AUDIT"))
                 {
-                    // Delete the DONT_AUDIT node so that it's not peristed to the database
+                    // Delete the DONT_AUDIT node so that it's not persisted to the database
                     node.delete();
-
-                    return null;
-                } else if (l.name().equalsIgnoreCase("TransactionRecord")) {
-                    // didn't collapse all possibilities into an OR statement because I'm not
-                    // sure whether we want to do anything else here depending on the label type.
-                    // will probably replace with a switch.
-                    return null;
-                } else if (l.name().equalsIgnoreCase("LocalTx")){
-
-                    // DITTO
-                    //node.delete();
-
                     return null;
                 }
 
@@ -90,16 +79,8 @@ public class TransactionRecorder {
 
         for (Relationship createdRelationship : transactionData.createdRelationships())
         {
-            if (createdRelationship.getEndNode().hasLabel(Label.label("LocalTx")) || createdRelationship.getStartNode().hasLabel(Label.label("LocalTx"))) {
-                return null;
-            } else {
-
-                processAddRemoveRelationship(createdRelationship, auditValues,
+            processAddRemoveRelationship(createdRelationship, auditValues,
                         AuditNode.ADD_RELATION);
-
-
-            }
-
         }
 
         for (Relationship deletedRelationship : transactionData.deletedRelationships())
@@ -161,7 +142,7 @@ public class TransactionRecorder {
         String data = objectMapper.writeValueAsString(audits);
 
         // just for dev purposes
-        // TO_DO: remove!
+        // TODO: remove!
         System.out.println(data);
 
         return  new TransactionRecord(timestampCreated, "NEW",  objectMapper.writeValueAsString(audits), transactionUUID);
@@ -509,7 +490,7 @@ public class TransactionRecorder {
         for (Label label : n.getLabels())
         {
             List<String> keyList = new ArrayList<>();
-            keyList.add("uuid") ;
+            keyList.add(UUID) ;
             if (keyList != null)
             {
                 for (String s : keyList)
@@ -542,7 +523,7 @@ public class TransactionRecorder {
         for (String label : auditNode.getAudit().getNodeLabels())
         {
             List<String> keyList = new ArrayList<>();
-            keyList.add("uuid") ;
+            keyList.add(UUID) ;
             Map<String, Object> properties = auditNode.getAudit().getAllProperties();
 
             if (keyList != null

@@ -237,7 +237,7 @@ public class DatabaseTransactionTests {
 
         cluster.coreTx((db, tx) ->
         {
-            tx.execute("CREATE (t:Test {uuid:'123XYZ'})-[:CONNECTED_TO]->(t2:Test {uuid:'XYZ123'})");
+            tx.execute("CREATE (t:Test {uuid:'123XYZ'})-[:CONNECTED_TO {uuid:123}]->(t2:Test {uuid:'XYZ123'})");
             tx.commit();
         });
 
@@ -258,7 +258,7 @@ public class DatabaseTransactionTests {
 
         cluster.coreTx((db, tx) ->
         {
-            tx.execute("CREATE (t:Test {uuid:'123XYZ'})-[:CONNECTED_TO]->(t2:Test {uuid:'XYZ123'})");
+            tx.execute("CREATE (t:Test {uuid:'123XYZ'})-[:CONNECTED_TO {uuid:123]->(t2:Test {uuid:'XYZ123'})");
             tx.commit();
         });
 

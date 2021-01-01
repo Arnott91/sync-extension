@@ -121,10 +121,11 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
                 System.out.println(e.getMessage());
             } finally {
                 logTransaction = true;
-                this.justUpdatedTr = false;
+
             }
 
         }
+        this.justUpdatedTr = false;
 
         // I tried returning the txRecordNode in the above try - catch statement and I didn't get a handle
         // to it in the afterCommit.  Should double-check.

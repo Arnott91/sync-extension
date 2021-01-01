@@ -3,7 +3,10 @@ package com.neo4j.sync.engine;
 
 /**
  * com.neo4j.sync.engine.TransactionRecord contains a collection of audit objects that reflect all of the changes resulting from
- * a single transaction.
+ * a single transaction.  I created this class with the assumption that the system may want to
+ * serialize the transaction data in numerous ways.  This class is where a calling system would define
+ * API requirements for retrieving the transaction data in another format.
+ * i.e. getJSONTransactionData...getXMLTransactionData...at this writing we only support JSON.
  *
  * @author Chris Upkes
  */
@@ -33,13 +36,13 @@ public class TransactionRecord {
         return timestampCreated;
     }
 
-
     public String getTransactionUUID() {
         return transactionUUID;
     }
 
     private String wrapTransactionMessage(String transactionData) {
-        // remove the surrounding brackets of each transaction message.
+        // the JSON from the is incomplete..
+        // wrap the JSON array in a valid JSON root
         return "{\"transactionEvents\":" + transactionData + "}";
 
     }
