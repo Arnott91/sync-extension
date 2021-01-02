@@ -167,7 +167,7 @@ public class GraphWriterTests {
     void relPropertyChangeTest1() throws Exception
     {
         // passed
-        assertNotNull(graphDatabaseAPI);
+
         JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODES_AND_RELATIONSHIP);
         GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI, mock(Log.class));
         graphWriter.executeCRUDOperation();
@@ -185,6 +185,35 @@ public class GraphWriterTests {
             assertTrue(relationship.hasProperty("weight"));
             System.out.println(relationship.getProperty("weight"));
             assertEquals("2", relationship.getProperty("weight").toString());
+        }
+        // check to see if the relationships have the right properties and values.
+        tx.commit();
+    }
+
+    @Test
+    void nodePropertyChangeTest1() throws Exception
+    {
+        // passed
+        assertNotNull(graphDatabaseAPI);
+        assertNotNull(graphDatabaseAPI);
+        Transaction tx1 = graphDatabaseAPI.beginTx();
+        Node myNode = tx1.createNode(Label.label("LocalTx"));
+        myNode.addLabel(Label.label("Test"));
+        myNode.setProperty("uuid","123XYZ");
+        myNode.setProperty("test","foo");
+        tx1.commit();
+        tx1.close();
+        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(NODE_PROPERTY_CHANGE);
+        GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI, mock(Log.class));
+        graphWriter.executeCRUDOperation();
+        Transaction tx = graphDatabaseAPI.beginTx();
+        Iterable<Node> newNodes  = () -> tx.findNodes(Label.label(LOCAL_lABEL));
+        assertTrue(newNodes.iterator().hasNext());
+        newNodes.forEach(node -> assertTrue(node.hasLabel(Label.label(LOCAL_lABEL))));
+        for (Node node : newNodes) {
+            System.out.println(node.getDegree());
+            System.out.println(node.getProperty("uuid"));
+            assertFalse(node.hasProperty("test"));
         }
         // check to see if the relationships have the right properties and values.
         tx.commit();

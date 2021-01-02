@@ -22,6 +22,8 @@ import java.util.Map;
  */
 
 public class TransactionRecorder {
+    // if you must defy Neo4j coding conventions and define properties with uppercase names then
+    //TODO: consider either changing properties to lowercase or change all uuid references to UUID.
     public static final String UUID = "uuid";
     private final TransactionData transactionData;
 

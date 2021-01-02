@@ -21,7 +21,6 @@ public class GraphWriter {
 
     public static final String ADD_NODE = "AddNode";
     public static final String DELETE_NODE = "DeleteNode";
-    public static final String ADD_PROPERTY = "AddProperty";
     public static final String NODE_PROPERTY_CHANGE = "NodePropertyChange";
     public static final String ADD_RELATION = "AddRelation";
     public static final String DELETE_RELATION = "DeleteRelation";
@@ -57,7 +56,10 @@ public class GraphWriter {
 
     }
 
-
+    // I do a lot of the same stuff in each delegate CRUD operation, however I'm not really
+    // using a delegate pattern.  Too little runway.  Refactoring in a delegate
+    // pattern will reduce footprint.  I just thought this would be easier to read and hand over.
+    // we can probably collapse the add / change / and delete logic into fewer methods.
 
     public void executeCRUDOperation() throws JSONException {
 
@@ -120,6 +122,8 @@ public class GraphWriter {
 
     private void changeRelationProperties(JSONObject event) throws JSONException {
 
+        // the only time we don't do this is if we are adding a node
+        // could consolidate this into one call of a private method.
         NodeFinder finder = new NodeFinder(event);
         Label startSearchLabel = finder.getSearchLabel(NodeDirection.START);
         Label targetSearchLabel = finder.getSearchLabel(NodeDirection.TARGET);
@@ -152,10 +156,6 @@ public class GraphWriter {
         }
     }
 
-
-
-
-
     private void addRelation(JSONObject event) throws JSONException {
 
         NodeFinder finder = new NodeFinder(event);
@@ -171,8 +171,8 @@ public class GraphWriter {
 
         try (Transaction tx = graphDb.beginTx()) {
             // first try and find the nodes.  If they don't exist we must create them.
-            Node startNode = tx.findNode(startSearchLabel, startPrimaryKey[0].toString(), startPrimaryKey[1].toString());
-            Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0].toString(), targetPrimaryKey[1].toString());
+            Node startNode = tx.findNode(startSearchLabel, startPrimaryKey[0], startPrimaryKey[1]);
+            Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0], targetPrimaryKey[1]);
             Relationship relationshipFrom = startNode.createRelationshipTo(targetNode, RelationshipType.withName(TransactionDataParser.getRelationType(event)));
             if (properties.size() > 0) properties.forEach(relationshipFrom::setProperty);
             tx.commit();
@@ -264,11 +264,10 @@ public class GraphWriter {
         }
     }
 
-
     private void addNode(JSONObject event) throws JSONException {
 
         // get the array of labels
-        String[] labels = (String[]) TransactionDataParser.getNodeLabels(event);
+        String[] labels = TransactionDataParser.getNodeLabels(event);
         // get the collection of properties
         Map<String,Object> properties = TransactionDataParser.getNodeProperties(event);
 

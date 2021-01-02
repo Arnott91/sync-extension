@@ -37,7 +37,7 @@ public class AddressResolver {
 
         // *** UNTESTED ***
         // quick logic to grab the fully qualified domain name and port (sans the protocol)
-        String[] fqdnAndPort = (virtualUri.substring(8,virtualUri.length())).split("\\:");
+        String[] fqdnAndPort = (virtualUri.substring(8)).split(":");
         // remove the bogus hostname to get the domain name.
         String domainName = fqdnAndPort[0].split("\\.", 2)[1];
         // the configuration requires ServerAddress

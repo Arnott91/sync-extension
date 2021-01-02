@@ -52,7 +52,10 @@ public class TransactionDataHandler {
         this.tx = tx;
     }
 
-
+    // I do a lot of the same stuff in each delegate CRUD operation, however I'm not really
+    // using a delegate pattern.  Too little runway.  Refactoring in a delegate
+    // pattern will reduce footprint.  I just thought this would be easier to read and hand over.
+    // we can probably collapse the add / change / and delete logic into fewer methods.
 
     public void executeCRUDOperation() throws JSONException {
 
@@ -135,13 +138,14 @@ public class TransactionDataHandler {
 
     private void deleteNodes(JSONObject event) throws JSONException {
 
+        // the only time we don't do this is if we are adding a node
+        // could consolidate this into one call of a private method.
         NodeFinder finder = new NodeFinder(event);
         Label searchLabel = finder.getSearchLabel();
         String[] primaryKey = finder.getPrimaryKey();
 
         Node foundNode = tx.findNode(searchLabel, primaryKey[0], primaryKey[1]);
         foundNode.delete();
-
 
     }
 
@@ -158,14 +162,12 @@ public class TransactionDataHandler {
         Map<String, Object> properties = TransactionDataParser.getRelationProperties(event);
 
         // first try and find the nodes.  If they don't exist we must create them.
-        Node startNode = tx.findNode(startSearchLabel, startPrimaryKey[0].toString(), startPrimaryKey[1].toString());
+        Node startNode = tx.findNode(startSearchLabel, startPrimaryKey[0], startPrimaryKey[1]);
 
-        Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0].toString(), targetPrimaryKey[1].toString());
+        Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0], targetPrimaryKey[1]);
 
         Relationship relationshipFrom = startNode.createRelationshipTo(targetNode, RelationshipType.withName(TransactionDataParser.getRelationType(event)));
         if (properties.size() > 0) properties.forEach(relationshipFrom::setProperty);
-
-
 
     }
 
@@ -185,7 +187,6 @@ public class TransactionDataHandler {
         for (Relationship relationship : startNode.getRelationships(Direction.OUTGOING, RelationshipType.withName(TransactionDataParser.getRelationType(event)))) {
             if (relationship.getEndNode().equals(targetNode)) relationship.delete();
         }
-
 
     }
 
@@ -210,15 +211,10 @@ public class TransactionDataHandler {
         }
 
         for (Map.Entry<String, Object> entry : changedProperties.entrySet()) {
-
             foundNode.setProperty(entry.getKey(), entry.getValue());
         }
 
-
     }
-
-
-
 
     private void changeRelationProperties(JSONObject event) throws JSONException {
 
@@ -245,9 +241,5 @@ public class TransactionDataHandler {
         }
 
     }
-
-
-
-
 
 }

@@ -4,8 +4,6 @@ import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import org.neo4j.graphdb.*;
@@ -23,35 +21,42 @@ public class Configuration {
     // if you do read from a config, it will be a relative
     // path, pointing to the import directory
     private static final String CONFIG_FILE_PATH = "c:/CONFIG/";
-
     private static final String CONFIG_FILE_NAME = "replication.conf";
-
     private static File configFile = null;
-
     private static JSONObject config = null;
-
     // field unused but the thinking is there may be a case where you want to
     // use only defaults and not load a file or read a db.  Maybe for testing.
     private boolean useDefaults = true;
-
     private static boolean initialized = false;
-
     private static int BATCH_SIZE = 100;
 
+    public static final String REPLICATION_SETTINGS_LABEL = "ReplicationSettings";
+    public static final String REPLICATION_SETTINGS_PK_VALUE = "singleton";
+    public static final String BATCH_SIZE_KEY = "batchSize";
+    public static final String OUT_BOUND_TX_DIR_KEY = "outBoundTxDir";
+    public static final String OUT_BOUND_RB_DIR_KEY = "outBoundRBDir";
+    public static final String IN_BOUND_TX_DIR_KEY = "inBoundTxDir";
+    public static final String POLLING_DIR_KEY = "pollingDir";
+    public static final String IN_BOUND_TX_LOG_FILE_KEY = "inBoundTxLogFile";
+    public static final String OUT_BOUND_TX_LOG_FILE_KEY = "outBoundTxLogFile";
+    public static final String IN_BOUND_RB_TX_FILE_KEY = "inBoundRbTxFile";
+    public static final String POLLING_FILE_KEY = "pollingFile";
+    public static final String CONFIGURATION_KEY = "configuration";
+    public static final String REPLICATION_SETTINGS_PK = "id";
+
     // TODO:  if setAllParameters is tested, then don't initialize with defaults here.
-    private static String TX_LOG_FILE_DIR = "c:/OUTBOUND_TX";
-    private static String TX_RB_LOG_FILE_DIR = "c:/ROLLBACK_OUTBOUND_TX";
-    private static String IB_TX_LOG_FILE_DIR = "c:/INBOUND_TX;";
-    private static String POLL_LOG_FILE_DIR = "c:/POLLING";
-    private static String TX_LOG_FILE_NAME_IN = "inbound_tx.log";
-    private static String TX_LOG_FILE_NAME = "outbound_tx.log";
-    private static String TX_RB_LOG_FILE_NAME = "rb_outbound_tx.log";
-    private static String POLLING_LOG = "tx_poll.log";
+    public static String TX_LOG_FILE_DIR = "c:/OUTBOUND_TX";
+    public static String TX_RB_LOG_FILE_DIR = "c:/ROLLBACK_OUTBOUND_TX";
+    public static String IB_TX_LOG_FILE_DIR = "c:/INBOUND_TX;";
+    public static String POLL_LOG_FILE_DIR = "c:/POLLING";
+    public static String TX_LOG_FILE_NAME_IN = "inbound_tx.log";
+    public static String TX_LOG_FILE_NAME = "outbound_tx.log";
+    public static String TX_RB_LOG_FILE_NAME = "rb_outbound_tx.log";
+    public static String POLLING_LOG = "tx_poll.log";
 
     public static Map<String, Object> getLogSettings() {
         return logSettings;
     }
-
     private static Map<String, Object> logSettings;
 
 
@@ -59,7 +64,7 @@ public class Configuration {
         return BATCH_SIZE;
     }
 
-    public static int getBatchSize(boolean isTest) throws IOException, JSONException {
+    public static int getBatchSize(boolean isTest) throws JSONException {
         if (isTest) {
             testInitializeJSON();
         } else {
@@ -74,15 +79,16 @@ public class Configuration {
 
     // *** UNTESTED ***
     public static void InitializeFromDB(GraphDatabaseService gdb) {
-
+        // TODO: initialize ReplicationSettings node in database
         if (isInitialized()) {
             try (Transaction tx = gdb.beginTx()) {
-                setAllParameters(tx.findNode(Label.label("ReplicationSettings"), "id", "singleton"));
+                setAllParameters(tx.findNode(Label.label(REPLICATION_SETTINGS_LABEL), REPLICATION_SETTINGS_PK, REPLICATION_SETTINGS_PK_VALUE));
                 initialized = true;
             }
         }
+
     }
-    private static void initializeJSON() throws IOException, JSONException {
+    private static void initializeJSON() throws JSONException {
         // TODO: grab and read parameters from the neo4j.conf if possible
         // OTHERWISE:  // grab the internal config object and get replication specific parameters.
         // Might as well stub out initialize with our own config file.
@@ -90,41 +96,35 @@ public class Configuration {
 
         if (isInitialized()) {
             configFile = new File(CONFIG_FILE_PATH + CONFIG_FILE_NAME);
-
-            if (!configFile.exists()) {
-                configFile.mkdir();
-                configFile.createNewFile();
-            }
             config = new JSONObject(configFile.toString());
-            BATCH_SIZE = Integer.parseInt(((JSONObject) ( new JSONObject(configFile.toString())).get("configuration")).get("batchSize").toString());
+            BATCH_SIZE = Integer.parseInt(((JSONObject) ( new JSONObject(configFile.toString())).get(CONFIGURATION_KEY)).get(BATCH_SIZE_KEY).toString());
         }
     }
-    private static void testInitializeJSON() throws IOException, JSONException {
-        // TO_DO: grab and read parameters from the neo4j.conf
+    private static void testInitializeJSON() throws JSONException {
+        // TODO: grab and read parameters from the neo4j.conf if possible
         // OTHERWISE:  // grab the internal config object and get replication specific parameters.
         // Might as well stub out initialize with our own config file.
         // why? because of time.  we can deploy with replication.conf in the import directory.
 
         configFile = new File(CONFIG_FILE_NAME);
-        config = new JSONObject(new String(Files.readAllBytes(Paths.get(String.valueOf(configFile)))));
-        JSONObject parameters = (JSONObject) config.get("configuration");
-        if (parameters.has("batchSize")) BATCH_SIZE = Integer.parseInt(parameters.get("batchSize").toString());
+        config = new JSONObject(configFile.toString());
+        BATCH_SIZE = Integer.parseInt(((JSONObject) ( new JSONObject(configFile.toString())).get(CONFIGURATION_KEY)).get(BATCH_SIZE_KEY).toString());
 
     }
 
     private static void setAllParameters(Node parameters) {
 
         // **** UNTESTED ****
-        BATCH_SIZE = Integer.parseInt(parameters.getProperty("batchSize", 100).toString());
+        BATCH_SIZE = Integer.parseInt(parameters.getProperty(BATCH_SIZE_KEY, 100).toString());
         logSettings = new HashMap<>();
-        logSettings.put("TX_LOG_FILE_DIR", parameters.getProperty("outBoundTxDir", "c:/OUTBOUND_TX"));
-        logSettings.put("TX_RB_LOG_FILE_DIR" ,parameters.getProperty("outBoundRBDir", "c:/ROLLBACK_OUTBOUND_TX"));
-        logSettings.put("IB_TX_LOG_FILE_DIR", parameters.getProperty("inBoundTxDir", "c:/INBOUND_TX;"));
-        logSettings.put("TX_LOG_FILE_NAME_IN", parameters.getProperty("pollingDir", "inbound_tx.log"));
-        logSettings.put("POLL_LOG_FILE_DIR", parameters.getProperty("pollingDir", "c:/POLLING"));
-        logSettings.put("TX_LOG_FILE_NAME", parameters.getProperty("pollingDir", "outbound_tx.log"));
-        logSettings.put("TX_RB_LOG_FILE_NAME", parameters.getProperty("pollingDir", "rb_outbound_tx.log"));
-        logSettings.put("POLLING_LOG", parameters.getProperty("pollingDir", "tx_poll.log"));
+        logSettings.put("TX_LOG_FILE_DIR", parameters.getProperty(OUT_BOUND_TX_DIR_KEY, TX_LOG_FILE_DIR));
+        logSettings.put("TX_RB_LOG_FILE_DIR" ,parameters.getProperty(OUT_BOUND_RB_DIR_KEY, TX_RB_LOG_FILE_DIR));
+        logSettings.put("IB_TX_LOG_FILE_DIR", parameters.getProperty(IN_BOUND_TX_DIR_KEY, IB_TX_LOG_FILE_DIR));
+        logSettings.put("TX_LOG_FILE_NAME_IN", parameters.getProperty(IN_BOUND_TX_LOG_FILE_KEY, TX_LOG_FILE_NAME_IN));
+        logSettings.put("POLL_LOG_FILE_DIR", parameters.getProperty(Configuration.POLLING_DIR_KEY, POLL_LOG_FILE_DIR));
+        logSettings.put("TX_LOG_FILE_NAME", parameters.getProperty(OUT_BOUND_TX_LOG_FILE_KEY, TX_LOG_FILE_NAME));
+        logSettings.put("TX_RB_LOG_FILE_NAME", parameters.getProperty(IN_BOUND_RB_TX_FILE_KEY, TX_RB_LOG_FILE_NAME));
+        logSettings.put("POLLING_LOG", parameters.getProperty(POLLING_FILE_KEY, POLLING_LOG));
 
     }
 }

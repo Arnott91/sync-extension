@@ -15,8 +15,18 @@ import org.neo4j.graphdb.event.TransactionData;
  */
 public class ReplicationJudge {
 
+    public static final String LOCAL_TX = "LocalTx";
+    public static final String DO_NOT_REPLICATE = "DoNotReplicate";
+
+    // if you must defy Neo4j coding conventions and define properties with uppercase names then
+    //TODO: consider either changing properties to lowercase or change all uuid references to UUID.
+    public static final String UUID = "uuid";
     private static boolean NAY = false;
     private static boolean YEA = true;
+
+
+    // if you must defy Neo4j coding conventions and define properties with uppercase names then
+    //TODO: consider either changing properties to lowercase or change all uuid references to UUID.
 
     public static boolean approved(TransactionData data) {
 
@@ -29,7 +39,7 @@ public class ReplicationJudge {
 
             Iterable<LabelEntry> labels = data.assignedLabels();
             for (LabelEntry le : labels)
-                if (le.label().name().equals("LocalTx") || le.label().name().equals("DoNotReplicate"))
+                if (le.label().name().equals(LOCAL_TX) || le.label().name().equals(DO_NOT_REPLICATE))
                     votes = votes & NAY;
                 if (votes == NAY) System.out.println("an assigned label either was LocaTx or DoNotReplicate: NAY");
         }
@@ -43,7 +53,7 @@ public class ReplicationJudge {
 
             Iterable<Relationship> rels = data.deletedRelationships();
             for (Relationship rel : rels) {
-                if (rel.getStartNode().hasLabel(Label.label("LocalTx"))) votes = votes & NAY;
+                if (rel.getStartNode().hasLabel(Label.label(LOCAL_TX))) votes = votes & NAY;
                 if (votes == NAY) System.out.println("relationships were deleted but were attached to nodes with LocalTX Label : NAY");
 
             }
@@ -51,7 +61,7 @@ public class ReplicationJudge {
         if (data.deletedNodes().iterator().hasNext()) {
             Iterable<Node> nodes = data.deletedNodes();
             for (Node node : nodes) {
-                if (node.hasLabel(Label.label("LocalTx"))) votes = votes & NAY;
+                if (node.hasLabel(Label.label(LOCAL_TX))) votes = votes & NAY;
                 if (votes == NAY) System.out.println("nodes were deleted but had LocalTx lable: NAY");
             }
         }
@@ -59,7 +69,7 @@ public class ReplicationJudge {
         if (data.createdRelationships().iterator().hasNext()) {
             Iterable<Relationship> rels = data.createdRelationships();
             for (Relationship rel : rels) {
-                if (rel.getStartNode().hasLabel(Label.label("LocalTx"))) votes = votes & NAY;
+                if (rel.getStartNode().hasLabel(Label.label(LOCAL_TX))) votes = votes & NAY;
                 if (votes == NAY) System.out.println("relationships were created but were attached to nodes with LocalTX Label : NAY");
 
             }
@@ -70,7 +80,7 @@ public class ReplicationJudge {
 
             for (PropertyEntry<Relationship> pe : relPropEntry) {
 
-                if (pe.entity().getStartNode().hasLabel(Label.label("LocalTx")) || !pe.entity().hasProperty("uuid")) {
+                if (pe.entity().getStartNode().hasLabel(Label.label(LOCAL_TX)) || !pe.entity().hasProperty(UUID)) {
                     votes = votes & NAY;
                     if (votes == NAY) System.out.println("relationship properties were assigned to nodes with LocalTX label : NAY\n");
                     if (votes == NAY) System.out.println(" or uuid was assigned to relationship");
@@ -84,7 +94,7 @@ public class ReplicationJudge {
         {
             Iterable<PropertyEntry<Node>> nodePropEntry = data.assignedNodeProperties();
             for (PropertyEntry<Node> ne : nodePropEntry) {
-                if (!ne.entity().hasProperty("uuid")) {
+                if (!ne.entity().hasProperty(UUID)) {
                     votes = votes & NAY;
                     if (votes == NAY) System.out.println("no uuid was assigned to node");
                 }

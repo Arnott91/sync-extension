@@ -184,7 +184,7 @@ public class TransactionDataParser {
         List<String> removed = new ArrayList<>();
         for (int i = 0; i < beforeAndAfterArray.length(); i++){
             JSONObject banda = (JSONObject) beforeAndAfterArray.get(i);
-            if (banda.get(NEW_VALUE).equals(null)){
+            if (banda.get(NEW_VALUE).equals(null) ){
                 removed.add(banda.get(PROPERTIES_KEY).toString());
             }
         }
@@ -195,6 +195,7 @@ public class TransactionDataParser {
     public static String getRelationType(JSONObject relationEvent) throws JSONException {
 
         // unlike node labels, relationships can have only one type.
+
         return relationEvent.get(RELATIONSHIP_LABEL_KEY).toString();
     }
 
