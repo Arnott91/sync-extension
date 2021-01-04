@@ -6,6 +6,8 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.net.ServerAddress;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.HashSet;
 
@@ -20,7 +22,7 @@ import java.util.HashSet;
 
 public class AddressResolver {
 
-    public static Driver createDriver(String virtualUri, String user, String password, String[] hostNames) {
+    public static Driver createDriver(String virtualUri, String user, String password, String[] hostNames) throws URISyntaxException {
         // *** UNTESTED ***
         // pass the array of host names and get back ServerAddress objects
         ServerAddress[] servers = getClusterAddresses(virtualUri, hostNames);
@@ -33,18 +35,16 @@ public class AddressResolver {
         return GraphDatabase.driver(virtualUri, AuthTokens.basic(user, password), config);
     }
 
-    private static ServerAddress[] getClusterAddresses(String virtualUri, String[] hostNames) {
-
+    private static ServerAddress[] getClusterAddresses(String virtualUri, String[] hostNames) throws URISyntaxException {
         // *** UNTESTED ***
-        // quick logic to grab the fully qualified domain name and port (sans the protocol)
-        String[] fqdnAndPort = (virtualUri.substring(8)).split(":");
-        // remove the bogus hostname to get the domain name.
-        String domainName = fqdnAndPort[0].split("\\.", 2)[1];
-        // the configuration requires ServerAddress
+        URI uri = new URI(virtualUri);
         ServerAddress[] serverAddresses = new ServerAddress[hostNames.length];
+
         for (int i = 0; i < hostNames.length; i++) {
-            serverAddresses[i] = ServerAddress.of(hostNames[i] + domainName, Integer.getInteger(fqdnAndPort[1]));
+
+            serverAddresses[i] = ServerAddress.of(hostNames[i], uri.getPort());
         }
         return serverAddresses;
+
     }
 }

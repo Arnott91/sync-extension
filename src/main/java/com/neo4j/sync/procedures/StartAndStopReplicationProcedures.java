@@ -49,11 +49,14 @@ public class StartAndStopReplicationProcedures {
         hostNames[1] = hostName2;
         hostNames[2] = hostName3;
 
+        try {
+            Driver driver = AddressResolver.createDriver(virtualRemoteDatabaseURI1, username, password, hostNames);
+            ReplicationEngine.initialize(virtualRemoteDatabaseURI1, username, password, hostNames).start();
 
-        Driver driver = AddressResolver.createDriver(virtualRemoteDatabaseURI1, username, password, hostNames);
-        ReplicationEngine.initialize(virtualRemoteDatabaseURI1, username, password, hostNames).start();
-
-        log.info("Replication from %s started.", virtualRemoteDatabaseURI1);
+            log.info("Replication from %s started.", virtualRemoteDatabaseURI1);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
     // we can possibly use this as an alternative stored start proc signature.
     public synchronized void startReplication(
@@ -63,8 +66,12 @@ public class StartAndStopReplicationProcedures {
             @Name(value = "password") String password) {
 
 
-        Driver driver = AddressResolver.createDriver(virtualRemoteDatabaseURI1, username, password, hostNames);
-        ReplicationEngine.initialize(virtualRemoteDatabaseURI1, username, password, hostNames).start();
+        try {
+            Driver driver = AddressResolver.createDriver(virtualRemoteDatabaseURI1, username, password, hostNames);
+            ReplicationEngine.initialize(virtualRemoteDatabaseURI1, username, password, hostNames).start();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         log.info("Replication from %s started.", virtualRemoteDatabaseURI1);
     }

@@ -20,10 +20,10 @@ public class ReplicationEngineTest {
     String[] hostNames = {"a","b","c"};
 
     @Test
-    public void shouldStartAndStopReplication() {
+    public void shouldStartAndStopReplication() throws Exception {
         // Given
-        ReplicationEngine engine = ReplicationEngine.initialize(NEO_4_J_REMOTE_URI, "username", "password", hostNames);
 
+        ReplicationEngine engine = ReplicationEngine.initialize(NEO_4_J_REMOTE_URI, "username", "password", hostNames);
         // When
         engine.start();
 
@@ -35,10 +35,13 @@ public class ReplicationEngineTest {
 
         // Then
         assertEquals(STOPPED, engine.status());
+
+
     }
 
     @Test
-    public void shouldBeAbleToRestart() {
+    public void shouldBeAbleToRestart() throws Exception {
+
         // Given
         ReplicationEngine engine = ReplicationEngine.initialize(NEO_4_J_REMOTE_URI, "username", "password", hostNames);
 
@@ -49,10 +52,11 @@ public class ReplicationEngineTest {
 
         // Then
         assertEquals(RUNNING, engine.status());
+
     }
 
     @Test
-    public void startShouldBeIdempotent() {
+    public void startShouldBeIdempotent() throws Exception {
         // Given
         ReplicationEngine engine = ReplicationEngine.initialize(NEO_4_J_REMOTE_URI, "username", "password", hostNames);
 
@@ -65,7 +69,7 @@ public class ReplicationEngineTest {
     }
 
     @Test
-    public void stopShouldBeIdempotent() {
+    public void stopShouldBeIdempotent() throws Exception {
         // Given
         ReplicationEngine engine = ReplicationEngine.initialize(NEO_4_J_REMOTE_URI, "username", "password", hostNames);
 
@@ -88,8 +92,6 @@ public class ReplicationEngineTest {
         // When
         engine.testPolling(2);
         //pause(120);
-
-
 
         // Then
         //assertEquals(STOPPED, engine.status());

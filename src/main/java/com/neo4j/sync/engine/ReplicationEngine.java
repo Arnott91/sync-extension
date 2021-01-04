@@ -7,6 +7,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.logging.Log;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.sql.Date;
 import java.util.Calendar;
 import java.util.concurrent.Executors;
@@ -54,6 +55,7 @@ public class ReplicationEngine {
     private Status status;
     private int records = 0;
 
+
     private ReplicationEngine(Driver driver) {
         this.driver = driver;
         this.execService = Executors.newScheduledThreadPool(1);
@@ -65,7 +67,7 @@ public class ReplicationEngine {
         this.gds = gds;
     }
 
-    public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, String[] hostNames) {
+    public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, String[] hostNames) throws URISyntaxException {
         if (instance != null) {
             instance.stop();
         }
@@ -75,7 +77,7 @@ public class ReplicationEngine {
         return instance();
     }
 
-    public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, GraphDatabaseService gds, String[] hostNames) {
+    public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, GraphDatabaseService gds, String[] hostNames) throws URISyntaxException {
         if (instance != null) {
             instance.stop();
         }
@@ -102,22 +104,23 @@ public class ReplicationEngine {
     public synchronized void start() {
         scheduledFuture = execService.scheduleAtFixedRate(() -> {
             try {
-                TransactionFileLogger.AppendPollingLog(format("Polling starting: %d", new Date(System.currentTimeMillis()).getTime()));
+                TransactionFileLogger.AppendPollingLog(String.format("Polling starting: %d", new Date(System.currentTimeMillis()).getTime()));
             } catch (IOException e) {
                 e.printStackTrace();
             }
             System.out.println("Grabbing the last timestamp");
             this.lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(gds);
             System.out.println("Grabbed the last timestamp");
-            // next go and grab the transaction records from the remote database
+
             Result runReplication = driver.session().run(format(REPLICATION_QUERY, lastTransactionTimestamp));
 
-            if (runReplication.hasNext()) {
+
+            if (runReplication.keys() != null && runReplication.hasNext()) {
                 try {
                     runReplication.forEachRemaining((a) -> {
                                 try {
                                     replicate(a);
-                                    TransactionFileLogger.AppendPollingLog(format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()));
+                                    TransactionFileLogger.AppendPollingLog(String.format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()));
 
 
                                 } catch (JSONException | IOException e) {
@@ -129,22 +132,17 @@ public class ReplicationEngine {
                     e.printStackTrace();
                 }
             }
-
-            // I assume we can run to sessions back to back on the same thread in this scheduler.
-            // Maybe we can provide more two threads?
             System.out.println("Starting pruning");
 
             Result runPrune = driver.session().run(format(PRUNE_QUERY, getThreeDaysAgo()));
+            int recordsPruned = runPrune.single().get("deleted").asInt();
 
-            System.out.println(format("Pruning complete %d records pruned", runPrune.single().get("deleted").asInt()));
-
-            // we can log the number of transactions pruned when we implement logging
+            System.out.println(String.format("Pruning complete %d records pruned", recordsPruned));
 
             try {
-                TransactionFileLogger.AppendPollingLog(format("Polling stopping: %d", new Date(System.currentTimeMillis()).getTime()));
-                TransactionFileLogger.AppendPollingLog("Records written since engine start: " + this.records);
-                TransactionFileLogger.AppendPollingLog("Records pruned: " + runPrune.single().get("deleted").asString());
-
+                TransactionFileLogger.AppendPollingLog(String.format("Polling stopping: %d", new Date(System.currentTimeMillis()).getTime()));
+                TransactionFileLogger.AppendPollingLog("Records written since engine start: " + records);
+                TransactionFileLogger.AppendPollingLog("Records pruned: " + recordsPruned);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -157,20 +155,19 @@ public class ReplicationEngine {
 
     public synchronized void testPolling(int polls) throws InterruptedException {
 
-        ScheduledExecutorService ses = Executors.newScheduledThreadPool(1);
+        Runnable replicationRoutine= () -> {
 
-        Runnable replicationTask = () -> {
-            runCount++;
-
+            runCount ++;
+            System.out.println("Im running a task!");
             try {
-                TransactionFileLogger.AppendPollingLog(format("Polling starting: %d", new Date(System.currentTimeMillis()).getTime()));
+                TransactionFileLogger.AppendPollingLog(String.format("Polling starting: %d", new Date(System.currentTimeMillis()).getTime()));
             } catch (IOException e) {
                 e.printStackTrace();
             }
             System.out.println("Grabbing the last timestamp");
             this.lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(gds);
             System.out.println("Grabbed the last timestamp");
-            // next go and grab the transaction records from the remote database
+
             Result runReplication = driver.session().run(format(REPLICATION_QUERY, lastTransactionTimestamp));
 
 
@@ -179,7 +176,7 @@ public class ReplicationEngine {
                     runReplication.forEachRemaining((a) -> {
                                 try {
                                     replicate(a);
-                                    TransactionFileLogger.AppendPollingLog(format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()));
+                                    TransactionFileLogger.AppendPollingLog(String.format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()));
 
 
                                 } catch (JSONException | IOException e) {
@@ -191,36 +188,31 @@ public class ReplicationEngine {
                     e.printStackTrace();
                 }
             }
-
-            // I assume we can run to sessions back to back on the same thread in this scheduler.
-            // Maybe we can provide more two threads?
             System.out.println("Starting pruning");
 
             Result runPrune = driver.session().run(format(PRUNE_QUERY, getThreeDaysAgo()));
+            int recordsPruned = runPrune.single().get("deleted").asInt();
 
-            System.out.println(format("Pruning complete %d records pruned", runPrune.single().get("deleted").asInt()));
-
-            // we can log the number of transactions pruned when we implement logging
+            System.out.println(String.format("Pruning complete %d records pruned", recordsPruned));
 
             try {
-                TransactionFileLogger.AppendPollingLog(format("Polling stopping: %d", new Date(System.currentTimeMillis()).getTime()));
-                TransactionFileLogger.AppendPollingLog("Records written since engine start: " + this.records);
-                TransactionFileLogger.AppendPollingLog("Records pruned: " + runPrune.single().get("deleted").asString());
+                TransactionFileLogger.AppendPollingLog(String.format("Polling stopping: %d", new Date(System.currentTimeMillis()).getTime()));
+                TransactionFileLogger.AppendPollingLog("Records written since engine start: " + records);
+                TransactionFileLogger.AppendPollingLog("Records pruned: " + recordsPruned);
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
-
         };
-        ScheduledFuture<?> scheduledFuture = ses.scheduleAtFixedRate(replicationTask, 5, 60, TimeUnit.SECONDS);
+        ScheduledFuture<?> scheduledFuture = execService.scheduleAtFixedRate(replicationRoutine, 5, 60, TimeUnit.SECONDS);
 
         while (true) {
             System.out.println("run count :" + runCount);
             Thread.sleep(10000);
-            if (runCount == 5) {
-                System.out.println("Count is 5, cancel the scheduledFuture!");
+            if (runCount == polls) {
+                System.out.println(String.format("Count is %d, cancel the scheduledFuture!", polls));
                 scheduledFuture.cancel(true);
-                ses.shutdown();
+                execService.shutdown();
                 break;
             }
         }
