@@ -7,6 +7,10 @@ import java.lang.String;
 
 import java.util.Map;
 
+/***
+ * The transaction history manager is used to keep track of the latest transaction replicated to a target database.
+ * @author Chris Upkes
+ */
 public class TransactionHistoryManager {
 
     public static final String LAST_TIME_RECORDED = "ltr.lastTimeRecorded";

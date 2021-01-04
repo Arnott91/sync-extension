@@ -1,12 +1,10 @@
 package com.neo4j.sync.engine;
 
 import org.codehaus.jettison.json.JSONException;
-import org.neo4j.codegen.api.Add;
 import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.logging.Log;
-
 import java.io.IOException;
 import java.sql.Date;
 import java.util.Calendar;
@@ -15,11 +13,11 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.logging.Handler;
-
 import static com.neo4j.sync.engine.ReplicationEngine.Status.RUNNING;
 import static com.neo4j.sync.engine.ReplicationEngine.Status.STOPPED;
 import static java.lang.String.format;
+
+
 
 public class ReplicationEngine {
     private static final String PRUNE_QUERY = "MATCH (tr:TransactionRecord) WHERE tr.timeCreated < %d DETACH DELETE tr " +
@@ -152,7 +150,7 @@ public class ReplicationEngine {
         this.status = RUNNING;
     }
 
-    public synchronized void start2() throws InterruptedException {
+    public synchronized void testPolling(int polls) throws InterruptedException {
 
 
 
@@ -218,8 +216,8 @@ public class ReplicationEngine {
         while (true) {
             System.out.println("run count :" + runCount);
             Thread.sleep(10000);
-            if (runCount == 5) {
-                System.out.println("Count is 5, cancel the scheduledFuture!");
+            if (runCount == polls) {
+                System.out.println(String.format("Count is %d, cancel the scheduledFuture!", polls));
                 scheduledFuture.cancel(true);
                 ses.shutdown();
                 break;

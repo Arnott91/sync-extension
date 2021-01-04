@@ -15,7 +15,7 @@ import java.util.Map;
 
 @TestInstance( TestInstance.Lifecycle.PER_METHOD )
 
-public class TranslatorTest {
+public class TransactionDataParserTests {
 
     @Inject
     private final String ADD_NODE = "{\"transactionEvents\":[{\"changeType\":\"AddNode\",\"nodeLabels\":[\"Test\"],\"primaryKey\":{\"uuid\":\"123XYZ\"},\"nodeKey\":null,\"relationshipLabel\":null,\"targetNodeLabels\":null,\"targetPrimaryKey\":null,\"properties\":null,\"allProperties\":{\"uuid\":\"123XYZ\"},\"uuid\":null,\"timestamp\":null,\"transactionId\":null,\"targetNodeKey\":null}]}";

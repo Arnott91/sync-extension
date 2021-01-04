@@ -6,6 +6,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.*;
 /**
  * com.neo4j.sync.engine.Configuration class is designed to load dynamic replication configuration information
@@ -59,6 +61,13 @@ public class Configuration {
     }
     private static Map<String, Object> logSettings;
 
+    public static void InitializeFromNeoConf(Config neo4jConfig) {
+        // TODO: initialize ReplicationSettings node in database
+        if (isInitialized()) {
+            setAllParameters(neo4jConfig);
+        }
+
+    }
 
     public static int getBatchSize() {
         return BATCH_SIZE;
@@ -88,6 +97,7 @@ public class Configuration {
         }
 
     }
+
     private static void initializeJSON() throws JSONException {
         // TODO: grab and read parameters from the neo4j.conf if possible
         // OTHERWISE:  // grab the internal config object and get replication specific parameters.
@@ -125,6 +135,22 @@ public class Configuration {
         logSettings.put("TX_LOG_FILE_NAME", parameters.getProperty(OUT_BOUND_TX_LOG_FILE_KEY, TX_LOG_FILE_NAME));
         logSettings.put("TX_RB_LOG_FILE_NAME", parameters.getProperty(IN_BOUND_RB_TX_FILE_KEY, TX_RB_LOG_FILE_NAME));
         logSettings.put("POLLING_LOG", parameters.getProperty(POLLING_FILE_KEY, POLLING_LOG));
+
+    }
+
+    private static void setAllParameters(Config neo4jConfig) {
+
+        // **** UNTESTED ****
+        BATCH_SIZE = Integer.parseInt(neo4jConfig.getSetting("batch_size").toString());
+        logSettings = new HashMap<>();
+        logSettings.put("TX_LOG_FILE_DIR", neo4jConfig.getSetting(OUT_BOUND_TX_DIR_KEY));
+        logSettings.put("TX_RB_LOG_FILE_DIR" ,neo4jConfig.getSetting(OUT_BOUND_RB_DIR_KEY));
+        logSettings.put("IB_TX_LOG_FILE_DIR", neo4jConfig.getSetting(IN_BOUND_TX_DIR_KEY));
+        logSettings.put("TX_LOG_FILE_NAME_IN", neo4jConfig.getSetting(IN_BOUND_TX_LOG_FILE_KEY));
+        logSettings.put("POLL_LOG_FILE_DIR", neo4jConfig.getSetting(POLLING_DIR_KEY));
+        logSettings.put("TX_LOG_FILE_NAME", neo4jConfig.getSetting(OUT_BOUND_TX_LOG_FILE_KEY));
+        logSettings.put("TX_RB_LOG_FILE_NAME", neo4jConfig.getSetting(IN_BOUND_RB_TX_FILE_KEY));
+        logSettings.put("POLLING_LOG", neo4jConfig.getSetting(POLLING_FILE_KEY));
 
     }
 }

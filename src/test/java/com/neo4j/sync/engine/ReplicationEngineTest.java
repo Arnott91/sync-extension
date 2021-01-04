@@ -86,7 +86,7 @@ public class ReplicationEngineTest {
         ReplicationEngine engine = ReplicationEngine.initialize(NEO_4_J_REMOTE_URI, "username", "password", graphDatabaseAPI, hostNames);
 
         // When
-        engine.start2();
+        engine.testPolling(2);
         //pause(120);
 
 

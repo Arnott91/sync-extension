@@ -2,11 +2,8 @@ package com.neo4j.sync.start;
 
 import com.neo4j.sync.listener.CaptureTransactionEventListenerAdapter;
 import org.neo4j.annotations.service.ServiceProvider;
-import org.neo4j.configuration.ConfigUtils;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Result;
-import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.AvailabilityListener;
 import org.neo4j.kernel.extension.ExtensionFactory;
@@ -16,11 +13,16 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.internal.LogService;
-import org.neo4j.configuration.*;
 
-
-
-
+/**
+ * <p>
+ * The extension factory is used to automate the registration of our transaction event listener.
+ * It can also be used to execute logic on startup, available, not available and shutdown events.
+ * </p>
+ *
+ * @author Chris Upkes
+ * @author Jim Webber
+ */
 
 @ServiceProvider
 public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.Dependencies>
@@ -47,15 +49,16 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
     }
     public static class SynchronizedGraphDatabaseLifecycle extends LifecycleAdapter
     {
+        // we made some of the variables static because we were attempting
+        // to reference them inside of the available method.
         private static Dependencies DEPENDENCIES = null;
         private static DatabaseManagementService DBMS;
 
         private final GraphDatabaseAPI db1;
-        public static GraphDatabaseAPI db2 = null;
-        private final Dependencies dependencies;
         private final LogService log;
         private final DatabaseManagementService databaseManagementService;
         private final AvailabilityGuard availabilityGuard;
+        private static boolean settingsInitialized = false;
 
 
         CaptureTransactionEventListenerAdapter listener;
@@ -65,24 +68,19 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
             return db;
         }
 
-        public static void dbInit () {
-            db2 = (GraphDatabaseAPI) DBMS.database("INTEGRATION.DATABASE");
-        }
+        public static GraphDatabaseService getDatabase() {
 
+            return (GraphDatabaseService) DBMS;
+        }
 
         public SynchronizedGraphDatabaseLifecycle(final LogService log, final GraphDatabaseAPI db, final Dependencies dependencies,final DatabaseManagementService databaseManagementService)
         {
             this.log = log;
             this.db1 = db;
-            this.dependencies = dependencies;
             this.databaseManagementService = databaseManagementService;
             DBMS = databaseManagementService;
             this.DEPENDENCIES = dependencies;
             this.availabilityGuard = dependencies.availabilityGuard();
-
-
-
-
         }
 
         @Override
@@ -91,7 +89,15 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
             availabilityGuard.addListener(new AvailabilityListener() {
                 @Override
                 public void available() {
-                   System.out.println("Some db is available");
+
+                    System.out.println("Some db is available");
+
+                    if (!settingsInitialized) {
+
+                        // TODO: write some init code here
+                        // cannot get a handle to a database and read or write
+
+                    }
                 }
 
                 @Override
@@ -100,29 +106,23 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
                     System.out.println("Some db is no longer available");
                 }
             });
-            // TO_DO:
-            // by installing the sync jar local replication is enabled.
-            // polling is deetermined at database start based on weither the user
-            // has set poling enabled.  Polling enabled settting must persist
-            // aftter system termination
-
-
-
 
             System.out.println("calling the start method in the new lifecycle adapter");
+            // TODO: replace the event registration in the tests with event registration here
+            // change the name of the database to be the Federos database
+
 //            if (this.db.databaseName().equalsIgnoreCase("neo4j")) {
 //                System.out.println("registering the listener with the default database");
 //                this.listener = new CaptureTransactionEventListenerAdapter();
 //                this.databaseManagementService.registerTransactionEventListener(this.db.databaseName(), this.listener);
 //            }
-
-
         }
-
-        //        private boolean autoRestart() {
+          // I'm not sure about this new method.  Jim authored this and I need to speak with him regarding it's use
+//        private boolean autoRestart() {
 //            // TODO: access the DB for the auto restart config and return boolean
 //            return false;
 //        }
+
         @Override
         public void shutdown()
         {

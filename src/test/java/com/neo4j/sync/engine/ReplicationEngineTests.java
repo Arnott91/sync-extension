@@ -89,7 +89,7 @@ public class ReplicationEngineTests {
     }
 
     @Test
-    public void start2Test1() throws Exception {
+    public void pollingTest1() throws Exception {
 
         try (Driver driver = driver(new URI("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
 
@@ -104,13 +104,13 @@ public class ReplicationEngineTests {
 
         ReplicationEngine engine = ReplicationEngine.initialize("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress(), "neo4j", "password", defaultDB);
 
-        engine.start2();
+        engine.testPolling(2);
 
 
     }
 
     @Test
-    public void start2Test2() throws Exception {
+    public void pollingTest2() throws Exception {
 
         try (Driver driver = driver(new URI("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
 
@@ -130,13 +130,13 @@ public class ReplicationEngineTests {
 
         ReplicationEngine engine = ReplicationEngine.initialize("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress(), "neo4j", "password", defaultDB);
 
-        engine.start2();
+        engine.testPolling(2);
 
 
     }
 
     @Test
-    public void start2Test3() throws Exception {
+    public void pollingTest3() throws Exception {
 
         try (Driver driver = driver(new URI("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
 
@@ -160,7 +160,7 @@ public class ReplicationEngineTests {
 
         ReplicationEngine engine = ReplicationEngine.initialize("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress(), "neo4j", "password", defaultDB);
 
-        engine.start2();
+        engine.testPolling(2);
 
 
 
