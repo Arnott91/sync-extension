@@ -2,6 +2,7 @@ package com.neo4j.sync.engine;
 
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.neo4j.configuration.Config;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -60,7 +61,6 @@ public class Configuration {
     public static Map<String, Object> getLogSettings() {
         return logSettings;
     }
-    private static Map<String, Object> logSettings;
 
     public static void InitializeFromNeoConf(Config neo4jConfig) {
         // TODO: initialize ReplicationSettings node in database

@@ -19,7 +19,17 @@ import static com.neo4j.sync.engine.ReplicationEngine.Status.RUNNING;
 import static com.neo4j.sync.engine.ReplicationEngine.Status.STOPPED;
 import static java.lang.String.format;
 
-
+/**
+ * Protocol is as follows.
+ * <p>
+ * The replication engine accepts a URI and authentication information and uses a scheduled executor service
+ * to set up interval polling of a remote database for replicated transactions.  It also is responsible
+ * for keeping track of the latest replicated transaction and for pruning replicated transactions at the source.
+ * </p>
+ *
+ * @author Chris Upkes
+ * @author Jim Webber
+ */
 
 public class ReplicationEngine {
     private static final String PRUNE_QUERY = "MATCH (tr:TransactionRecord) WHERE tr.timeCreated < %d DETACH DELETE tr " +

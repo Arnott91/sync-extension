@@ -14,6 +14,19 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.internal.LogService;
 
+/**
+ * Protocol is as follows.
+ * <p>
+ * The SyncExtensionFactory extends the Neo4j database by providing a way to programmatically register
+ * and deregister listener adapters, such as our CaptureTransactionEventListenerAdapter.
+ * We override methods such as start, shutdown, avialable and unavailable methods to execute
+ * logic based on typical database events.
+ * </p>
+ *
+ * @author Chris Upkes
+ * @author Jim Webber
+ */
+
 
 @ServiceProvider
 public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.Dependencies> {
@@ -83,13 +96,10 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
                     System.out.println("Some db is no longer available");
                 }
             });
-            // TO_DO:
-            // by installing the sync jar local replication is enabled.
-            // polling is deetermined at database start based on weither the user
-            // has set poling enabled.  Polling enabled settting must persist
-            // aftter system termination
+            // TODO: determine if we can use methods in the availabilityGuard interface to initialize our app
 
             System.out.println("calling the start method in the new lifecycle adapter");
+            //TODO: Uncomment this line and remove the same initialization code that you'll find in the tests.
 //            if (this.db.databaseName().equalsIgnoreCase("neo4j")) {
 //                System.out.println("registering the listener with the default database");
 //                this.listener = new CaptureTransactionEventListenerAdapter();
