@@ -3,7 +3,9 @@ package com.neo4j.sync.engine;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.neo4j.graphdb.Label;
+
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * com.neo4j.sync.engine.NodeFinder provides primary keys and labels used for finding nodes
@@ -19,6 +21,7 @@ public class NodeFinder {
     public NodeFinder(JSONObject event) {
         this.event = event;
     }
+
     // I chose to use arrays because all results are finite...maybe I'm old-school.
     public String[] getPrimaryKey() throws JSONException {
 
@@ -42,7 +45,7 @@ public class NodeFinder {
         // therefore there will be only one primary key value.
         Map<String, Object> pk = TransactionDataParser.getPrimaryKey(event, direction);
         String[] primaryKey = new String[2];
-        for (Map.Entry<String, Object> entry : pk.entrySet()) {
+        for (Map.Entry<String, Object> entry : Objects.requireNonNull(pk).entrySet()) {
             primaryKey[0] = entry.getKey();
             primaryKey[1] = entry.getValue().toString();
         }
@@ -62,8 +65,6 @@ public class NodeFinder {
         // grab the labels from the transaction
         String[] labels = TransactionDataParser.getNodeLabels(event, direction);
         // only need to grab the first label-  that should be the primary
-        return Label.label(labels[0]);
+        return Label.label(Objects.requireNonNull(labels)[0]);
     }
-
-
 }

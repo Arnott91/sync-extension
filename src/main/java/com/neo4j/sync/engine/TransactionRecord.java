@@ -16,6 +16,7 @@ public class TransactionRecord {
     private final String status;
     private final String transactionData;
     private final String transactionUUID;
+
     public TransactionRecord(long timestampCreated, String status, String transactionData, String transactionUUID) {
 
         this.timestampCreated = timestampCreated;
@@ -46,8 +47,6 @@ public class TransactionRecord {
         return "{\"transactionEvents\":" + transactionData + "}";
 
     }
-
-
 }
 
 

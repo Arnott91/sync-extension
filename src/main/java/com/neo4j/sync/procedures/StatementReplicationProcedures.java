@@ -6,6 +6,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.*;
+
 import java.util.UUID;
 
 /**
@@ -22,10 +23,6 @@ import java.util.UUID;
 
 public class StatementReplicationProcedures {
 
-    @Context
-    public Log log;
-    @Context
-    public GraphDatabaseService gds;
 
     private final static String TX_RECORD_LABEL = "TransactionRecord";
     private final static String TX_RECORD_NODE_BEFORE_COMMIT_KEY = "transactionUUID";
@@ -36,11 +33,17 @@ public class StatementReplicationProcedures {
     private final static String ST_TX_RECORD_TX_DATA_KEY = "transactionStatement";
     private final static String ST_DATA_JSON = "{\"statement\":\"true\"}";
 
+    @Context
+    public Log log;
+    @Context
+    public GraphDatabaseService gds;
+
     @Procedure(name = "replicateStatement", mode = Mode.WRITE)
     @Description("commits the statement and creates a StatementRecord for replication.")
     public void replicateStatement( @Name(value = "statement") String statement) {
         // we we simply execute the statement passed into the procedure
         try (Transaction tx = gds.beginTx()) {
+
             tx.execute(statement);
             tx.commit();
             log.info("replicating statement: " + statement);
@@ -67,7 +70,6 @@ public class StatementReplicationProcedures {
         } catch (Exception e) {
             log.error(e.getMessage());
             e.printStackTrace();
-        }
-
+         }
     }
 }
