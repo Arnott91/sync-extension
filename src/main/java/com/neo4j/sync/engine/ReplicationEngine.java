@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.sql.Date;
 import java.util.Calendar;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -74,6 +75,16 @@ public class ReplicationEngine {
 
         instance = new ReplicationEngine(
                 AddressResolver.createDriver(remoteDatabaseURI, username, password, hostNames));
+        return instance();
+    }
+
+    public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, List<String> hostNames) throws URISyntaxException {
+        if (instance != null) {
+            instance.stop();
+        }
+
+        instance = new ReplicationEngine(
+                AddressResolver.createDriver(remoteDatabaseURI, username, password, hostNames.toArray(new String[hostNames.size()])));
         return instance();
     }
 

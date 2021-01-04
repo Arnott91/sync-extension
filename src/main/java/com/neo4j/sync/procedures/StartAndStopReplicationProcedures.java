@@ -9,6 +9,7 @@ import org.neo4j.procedure.*;
 
 import java.io.IOException;
 import java.sql.Date;
+import java.util.List;
 import java.util.stream.Stream;
 
 /**
@@ -61,7 +62,24 @@ public class StartAndStopReplicationProcedures {
     // we can possibly use this as an alternative stored start proc signature.
     public synchronized void startReplication(
             @Name(value = "virtualRemoteDatabaseURI1") String virtualRemoteDatabaseURI1,
-            @Name(value = "hostNames") String[] hostNames, // or maybe List<String> hostNames
+            @Name(value = "hostNames") List<String> hostNames,
+            @Name(value = "username") String username,
+            @Name(value = "password") String password) {
+
+
+        try {
+            Driver driver = AddressResolver.createDriver(virtualRemoteDatabaseURI1, username, password, hostNames);
+            ReplicationEngine.initialize(virtualRemoteDatabaseURI1, username, password, hostNames).start();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        log.info("Replication from %s started.", virtualRemoteDatabaseURI1);
+    }
+
+    public synchronized void startReplication(
+            @Name(value = "virtualRemoteDatabaseURI1") String virtualRemoteDatabaseURI1,
+            @Name(value = "hostNames") String[] hostNames,
             @Name(value = "username") String username,
             @Name(value = "password") String password) {
 
