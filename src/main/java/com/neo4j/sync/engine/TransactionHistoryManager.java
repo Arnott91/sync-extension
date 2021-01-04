@@ -3,6 +3,9 @@ package com.neo4j.sync.engine;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
+import java.lang.String;
+
+import java.util.Map;
 
 /***
  * The transaction history manager is used to keep track of the latest transaction replicated to a target database.
@@ -17,10 +20,12 @@ public class TransactionHistoryManager {
 
     public static Long getLastReplicationTimestamp(GraphDatabaseService gds) {
 
-        Long timeStamp = null;
+
+        Long timeStamp =null;
 
         try (Transaction tx = gds.beginTx();
-             Result result = tx.execute(LOCAL_TIMESTAMP_QUERY)) {
+             Result result = tx.execute( LOCAL_TIMESTAMP_QUERY) )
+        {
             while (result.hasNext()) {
                 timeStamp = (long) result.next().get(LAST_TIME_RECORDED);
             }
@@ -30,19 +35,27 @@ public class TransactionHistoryManager {
                 timeStamp = 0L;
 
             }
+
             tx.commit();
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Exception e){
+            System.out.println(e.getMessage());
         }
+
+
         return timeStamp;
     }
 
     public static void setLastReplicationTimestamp(GraphDatabaseService gds, long timeStamp) {
 
         try (Transaction tx = gds.beginTx()) {
-            tx.execute(String.format(UPDATE_LAST_TRANSACTION_TIMESTAMP_QUERY, timeStamp));
+
+            Result result = tx.execute(String.format(UPDATE_LAST_TRANSACTION_TIMESTAMP_QUERY, timeStamp));
             tx.commit();
         }
+
+
     }
+
+
 }
 
