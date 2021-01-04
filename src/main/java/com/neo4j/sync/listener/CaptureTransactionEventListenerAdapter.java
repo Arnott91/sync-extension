@@ -1,12 +1,14 @@
 package com.neo4j.sync.listener;
 
 
-import com.neo4j.sync.engine.*;
+import com.neo4j.sync.engine.ReplicationJudge;
+import com.neo4j.sync.engine.TransactionFileLogger;
+import com.neo4j.sync.engine.TransactionRecord;
+import com.neo4j.sync.engine.TransactionRecorder;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.event.LabelEntry;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListener;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -43,7 +45,7 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
     private long transactionTimestamp;
     private String txData;
     private boolean logTransaction = false;
-    private boolean replicate = true;
+    private final boolean replicate = true;
     private boolean justUpdatedTr = false;
 
     @Override
@@ -53,8 +55,6 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
         // REGARDING DDL AND DCL: We can grab index info from the transaction object if we really want to go there.
         // Remember,  schema transactions cannot include DML transactions.
         // System.out.println(transaction.schema().getIndexes().iterator().next().getName());
-
-        System.out.println("In the beforeCommit method of our event listener");
 
         if (ReplicationJudge.approved(data) && !this.justUpdatedTr) {
             // get a handle to the transaction recorder.  This will grab information from the Transaction Data object
@@ -86,19 +86,13 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
                 e.printStackTrace();
             } finally {
                 logTransaction = true;
-
             }
-
         }
         this.justUpdatedTr = false;
 
         // I tried returning the txRecordNode in the above try - catch statement and I didn't get a handle
         // to it in the afterCommit.  Should double-check.
         return null;
-    }
-
-    private Log getLog(GraphDatabaseService databaseService) {
-        return ((GraphDatabaseAPI) databaseService).getDependencyResolver().provideDependency(LogProvider.class).get().getLog(this.getClass());
     }
 
     @Override
@@ -133,8 +127,6 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
                 e.printStackTrace();
             }
         }
-        System.out.println("In the afterCommit method of our event listener");
-
     }
 
     @Override
@@ -142,14 +134,11 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
         // identify transactions that have rolled backed with their transaction UUID values so that we can
         // compare to the transaction log and look for written transaction records that were rolled back.
         // TODO: use the refactored file logger initialized from the database.
-        System.out.println("In the afterRollback method of our event listener");
 
         if (replicate) {
             try {
                 TransactionFileLogger.AppendRollbackTransactionLog(this.beforeCommitTxId, this.transactionTimestamp);
             } catch (Exception e) {
-                // log exception
-                //getLog(sourceDatabase).error(e.getMessage(), e);
                 e.printStackTrace();
             }
         }

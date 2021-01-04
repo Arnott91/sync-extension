@@ -1,9 +1,8 @@
 package com.neo4j.sync.engine;
 
 import org.codehaus.jettison.json.JSONException;
-import org.neo4j.codegen.api.Add;
-import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
+import org.neo4j.driver.*;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.logging.Log;
 
@@ -15,7 +14,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.logging.Handler;
 
 import static com.neo4j.sync.engine.ReplicationEngine.Status.RUNNING;
 import static com.neo4j.sync.engine.ReplicationEngine.Status.STOPPED;
@@ -24,32 +22,29 @@ import static java.lang.String.format;
 public class ReplicationEngine {
     private static final String PRUNE_QUERY = "MATCH (tr:TransactionRecord) WHERE tr.timeCreated < %d DETACH DELETE tr " +
             "RETURN COUNT(tr) as deleted";
+    private final static String ST_DATA_JSON = "{\"statement\":\"true\"}";
+    private static ReplicationEngine instance;
+    private static int runCount = 0;
     private final Driver driver;
     private final ScheduledExecutorService execService;
-    private ScheduledFuture<?> scheduledFuture;
-    private GraphDatabaseService gds;
-    private Log log;
-    private long lastTransactionTimestamp;
-    private long transactionRecordTimestamp;
     private final String LOCAL_TIMESTAMP_QUERY = "MATCH (ltr:LastTransactionReplicated {id:'SINGLETON'}) RETURN ltr.lastTimeRecorded";
     private final String REPLICATION_QUERY = "MATCH (tr:TransactionRecord) " +
             "WHERE tr.timeCreated > %d " +
             "RETURN tr.uuid, tr.timeCreated, tr.transactionData, tr.transactionStatement";
     private final String UPDATE_LAST_TRANSACTION_TIMESTAMP_QUERY = "MERGE (ltr:LastTransactionReplicated {id:'SINGLETON'}) " +
             "SET tr.lastTimeRecorded = %d";
-
-    private static ReplicationEngine instance;
-    private Status status;
-    private static int runCount = 0;
-    private int records = 0;
-
     private final String ST_DATA_VALUE = "NO_STATEMENT";
-    private final static String ST_DATA_JSON = "{\"statement\":\"true\"}";
+    private ScheduledFuture<?> scheduledFuture;
+    private GraphDatabaseService gds;
+    private Log log;
+    private long lastTransactionTimestamp;
+    private long transactionRecordTimestamp;
+    private Status status;
+    private int records = 0;
 
     private ReplicationEngine(Driver driver) {
         this.driver = driver;
         this.execService = Executors.newScheduledThreadPool(1);
-
     }
 
     private ReplicationEngine(Driver driver, GraphDatabaseService gds) {
@@ -64,9 +59,8 @@ public class ReplicationEngine {
         }
 
         instance = new ReplicationEngine(
-                AddressResolver.createDriver(remoteDatabaseURI,username,password, hostNames));
+                AddressResolver.createDriver(remoteDatabaseURI, username, password, hostNames));
         return instance();
-
     }
 
     public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, GraphDatabaseService gds, String[] hostNames) {
@@ -75,9 +69,8 @@ public class ReplicationEngine {
         }
 
         instance = new ReplicationEngine(
-                AddressResolver.createDriver(remoteDatabaseURI,username,password, hostNames),gds);
+                AddressResolver.createDriver(remoteDatabaseURI, username, password, hostNames), gds);
         return instance();
-
     }
 
     public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, GraphDatabaseService gds) {
@@ -86,9 +79,8 @@ public class ReplicationEngine {
         }
 
         instance = new ReplicationEngine(
-                GraphDatabase.driver( remoteDatabaseURI, AuthTokens.basic( username, password )), gds);
+                GraphDatabase.driver(remoteDatabaseURI, AuthTokens.basic(username, password)), gds);
         return instance();
-
     }
 
     public static ReplicationEngine instance() {
@@ -98,7 +90,7 @@ public class ReplicationEngine {
     public synchronized void start() {
         scheduledFuture = execService.scheduleAtFixedRate(() -> {
             try {
-                TransactionFileLogger.AppendPollingLog(String.format("Polling starting: %d", new Date(System.currentTimeMillis()).getTime()));
+                TransactionFileLogger.AppendPollingLog(format("Polling starting: %d", new Date(System.currentTimeMillis()).getTime()));
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -113,7 +105,7 @@ public class ReplicationEngine {
                     runReplication.forEachRemaining((a) -> {
                                 try {
                                     replicate(a);
-                                    TransactionFileLogger.AppendPollingLog(String.format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()));
+                                    TransactionFileLogger.AppendPollingLog(format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()));
 
 
                                 } catch (JSONException | IOException e) {
@@ -132,12 +124,12 @@ public class ReplicationEngine {
 
             Result runPrune = driver.session().run(format(PRUNE_QUERY, getThreeDaysAgo()));
 
-            System.out.println(String.format("Pruning complete %d records pruned", runPrune.single().get("deleted").asInt()));
+            System.out.println(format("Pruning complete %d records pruned", runPrune.single().get("deleted").asInt()));
 
             // we can log the number of transactions pruned when we implement logging
 
             try {
-                TransactionFileLogger.AppendPollingLog(String.format("Polling stopping: %d", new Date(System.currentTimeMillis()).getTime()));
+                TransactionFileLogger.AppendPollingLog(format("Polling stopping: %d", new Date(System.currentTimeMillis()).getTime()));
                 TransactionFileLogger.AppendPollingLog("Records written since engine start: " + this.records);
                 TransactionFileLogger.AppendPollingLog("Records pruned: " + runPrune.single().get("deleted").asString());
 
@@ -148,21 +140,18 @@ public class ReplicationEngine {
         }, 0, 60L, TimeUnit.SECONDS);
 
 
-
         this.status = RUNNING;
     }
 
     public synchronized void start2() throws InterruptedException {
 
-
-
         ScheduledExecutorService ses = Executors.newScheduledThreadPool(1);
 
         Runnable replicationTask = () -> {
-            runCount ++;
+            runCount++;
 
             try {
-                TransactionFileLogger.AppendPollingLog(String.format("Polling starting: %d", new Date(System.currentTimeMillis()).getTime()));
+                TransactionFileLogger.AppendPollingLog(format("Polling starting: %d", new Date(System.currentTimeMillis()).getTime()));
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -178,7 +167,7 @@ public class ReplicationEngine {
                     runReplication.forEachRemaining((a) -> {
                                 try {
                                     replicate(a);
-                                    TransactionFileLogger.AppendPollingLog(String.format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()));
+                                    TransactionFileLogger.AppendPollingLog(format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()));
 
 
                                 } catch (JSONException | IOException e) {
@@ -197,19 +186,17 @@ public class ReplicationEngine {
 
             Result runPrune = driver.session().run(format(PRUNE_QUERY, getThreeDaysAgo()));
 
-            System.out.println(String.format("Pruning complete %d records pruned", runPrune.single().get("deleted").asInt()));
+            System.out.println(format("Pruning complete %d records pruned", runPrune.single().get("deleted").asInt()));
 
             // we can log the number of transactions pruned when we implement logging
 
             try {
-                TransactionFileLogger.AppendPollingLog(String.format("Polling stopping: %d", new Date(System.currentTimeMillis()).getTime()));
+                TransactionFileLogger.AppendPollingLog(format("Polling stopping: %d", new Date(System.currentTimeMillis()).getTime()));
                 TransactionFileLogger.AppendPollingLog("Records written since engine start: " + this.records);
                 TransactionFileLogger.AppendPollingLog("Records pruned: " + runPrune.single().get("deleted").asString());
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
-
 
 
         };
@@ -225,14 +212,9 @@ public class ReplicationEngine {
                 break;
             }
         }
-
-
-
-
     }
 
     private Consumer<? super Record> replicate(Record record) throws JSONException {
-
 
         // grab the timestamp from the TransactionRecord node
         Value transactionTime = record.get("tr.timeCreated");
@@ -241,8 +223,6 @@ public class ReplicationEngine {
             // grab the transaction JSON data from the Transa)ctionRecord node
 
             String transactionData = record.get("tr.transactionData").asString();
-
-
 
 
             try (org.neo4j.graphdb.Transaction tx = gds.beginTx()) {
@@ -284,8 +264,6 @@ public class ReplicationEngine {
         return status;
     }
 
-    public enum Status {RUNNING, STOPPED};;
-
     private long getThreeDaysAgo() {
         return daysAgo(3);
     }
@@ -296,5 +274,5 @@ public class ReplicationEngine {
         return (cal.getTime()).getTime();
     }
 
-
+    public enum Status {RUNNING, STOPPED}
 }

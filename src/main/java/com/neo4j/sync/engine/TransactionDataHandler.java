@@ -4,6 +4,7 @@ import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
+
 import java.util.List;
 import java.util.Map;
 
@@ -120,7 +121,7 @@ public class TransactionDataHandler {
     private void addNode(JSONObject event) throws JSONException {
 
         // get the array of labels
-        String[] labels = (String[]) TransactionDataParser.getNodeLabels(event);
+        String[] labels = TransactionDataParser.getNodeLabels(event);
         // get the collection of properties
         Map<String, Object> properties = TransactionDataParser.getNodeProperties(event);
 
@@ -146,7 +147,6 @@ public class TransactionDataHandler {
 
         Node foundNode = tx.findNode(searchLabel, primaryKey[0], primaryKey[1]);
         foundNode.delete();
-
     }
 
     private void addRelation(JSONObject event) throws JSONException {
@@ -187,9 +187,7 @@ public class TransactionDataHandler {
         for (Relationship relationship : startNode.getRelationships(Direction.OUTGOING, RelationshipType.withName(TransactionDataParser.getRelationType(event)))) {
             if (relationship.getEndNode().equals(targetNode)) relationship.delete();
         }
-
     }
-
 
 
     private void changeNodeProperties(JSONObject event) throws JSONException {
@@ -213,7 +211,6 @@ public class TransactionDataHandler {
         for (Map.Entry<String, Object> entry : changedProperties.entrySet()) {
             foundNode.setProperty(entry.getKey(), entry.getValue());
         }
-
     }
 
     private void changeRelationProperties(JSONObject event) throws JSONException {
@@ -239,7 +236,5 @@ public class TransactionDataHandler {
             }
             if (properties.size() > 0) properties.forEach(singleRelationship::setProperty);
         }
-
     }
-
 }

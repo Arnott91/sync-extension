@@ -2,11 +2,8 @@ package com.neo4j.sync.start;
 
 import com.neo4j.sync.listener.CaptureTransactionEventListenerAdapter;
 import org.neo4j.annotations.service.ServiceProvider;
-import org.neo4j.configuration.ConfigUtils;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Result;
-import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.availability.AvailabilityListener;
 import org.neo4j.kernel.extension.ExtensionFactory;
@@ -16,73 +13,59 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.internal.LogService;
-import org.neo4j.configuration.*;
-
-
-
 
 
 @ServiceProvider
-public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.Dependencies>
-{
-    public SyncExtensionFactory()
-    {
+public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.Dependencies> {
+    public SyncExtensionFactory() {
         super(ExtensionType.DATABASE, "CaptureTransactionEventListenerAdapter");
     }
+
     @Override
-    public Lifecycle newInstance(final ExtensionContext extensionContext, final Dependencies dependencies)
-    {
+    public Lifecycle newInstance(final ExtensionContext extensionContext, final Dependencies dependencies) {
         final GraphDatabaseAPI db = dependencies.graphdatabaseAPI();
         final LogService log = dependencies.log();
         final DatabaseManagementService databaseManagementService = dependencies.databaseManagementService();
         final AvailabilityGuard availabilityGuard = dependencies.availabilityGuard();
         return new SynchronizedGraphDatabaseLifecycle(log, db, dependencies, databaseManagementService);
     }
-    interface Dependencies
-    {
+
+    interface Dependencies {
         GraphDatabaseAPI graphdatabaseAPI();
+
         DatabaseManagementService databaseManagementService();
+
         AvailabilityGuard availabilityGuard();
+
         LogService log();
     }
-    public static class SynchronizedGraphDatabaseLifecycle extends LifecycleAdapter
-    {
+
+    public static class SynchronizedGraphDatabaseLifecycle extends LifecycleAdapter {
+        public static GraphDatabaseAPI db2 = null;
         private static Dependencies DEPENDENCIES = null;
         private static DatabaseManagementService DBMS;
-
         private final GraphDatabaseAPI db1;
-        public static GraphDatabaseAPI db2 = null;
         private final Dependencies dependencies;
         private final LogService log;
         private final DatabaseManagementService databaseManagementService;
         private final AvailabilityGuard availabilityGuard;
 
-
-        CaptureTransactionEventListenerAdapter listener;
-
-        public static GraphDatabaseService getDatabase(String databaseName) {
-            GraphDatabaseService db = DEPENDENCIES.databaseManagementService().database(databaseName);
-            return db;
-        }
-
-        public static void dbInit () {
-            db2 = (GraphDatabaseAPI) DBMS.database("INTEGRATION.DATABASE");
-        }
-
-
-        public SynchronizedGraphDatabaseLifecycle(final LogService log, final GraphDatabaseAPI db, final Dependencies dependencies,final DatabaseManagementService databaseManagementService)
-        {
+        public SynchronizedGraphDatabaseLifecycle(final LogService log, final GraphDatabaseAPI db, final Dependencies dependencies, final DatabaseManagementService databaseManagementService) {
             this.log = log;
             this.db1 = db;
             this.dependencies = dependencies;
             this.databaseManagementService = databaseManagementService;
             DBMS = databaseManagementService;
-            this.DEPENDENCIES = dependencies;
+            DEPENDENCIES = dependencies;
             this.availabilityGuard = dependencies.availabilityGuard();
+        }
 
+        public static GraphDatabaseService getDatabase(String databaseName) {
+            return DEPENDENCIES.databaseManagementService().database(databaseName);
+        }
 
-
-
+        public static void dbInit() {
+            db2 = (GraphDatabaseAPI) DBMS.database("INTEGRATION.DATABASE");
         }
 
         @Override
@@ -91,7 +74,7 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
             availabilityGuard.addListener(new AvailabilityListener() {
                 @Override
                 public void available() {
-                   System.out.println("Some db is available");
+                    System.out.println("Some db is available");
                 }
 
                 @Override
@@ -105,9 +88,6 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
             // polling is deetermined at database start based on weither the user
             // has set poling enabled.  Polling enabled settting must persist
             // aftter system termination
-
-
-
 
             System.out.println("calling the start method in the new lifecycle adapter");
 //            if (this.db.databaseName().equalsIgnoreCase("neo4j")) {
@@ -124,13 +104,9 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
 //            return false;
 //        }
         @Override
-        public void shutdown()
-        {
+        public void shutdown() {
             System.out.println("calling the shutdown method in the new lifecycle adapter");
             //this.databaseManagementService.unregisterTransactionEventListener(this.db.databaseName(), this.listener);
         }
-
-
     }
-
 }
