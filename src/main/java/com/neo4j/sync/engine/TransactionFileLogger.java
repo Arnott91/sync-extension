@@ -1,6 +1,8 @@
 package com.neo4j.sync.engine;
 
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
+import org.neo4j.logging.LogProvider;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -24,7 +26,7 @@ public class TransactionFileLogger {
     private static String TX_LOG_FILE_NAME = "outbound_tx.log";
     private static String TX_RB_LOG_FILE_NAME = "rb_outbound_tx.log";
     private static String POLLING_LOG = "tx_poll.log";
-    private static final boolean areSettingsInitialized = false;
+    private static boolean areSettingsInitialized = false;
 
     private static void initializeTxLogFile() {
 
@@ -48,21 +50,19 @@ public class TransactionFileLogger {
         File logFile = null;
 
         switch (logtype) {
-            case INBOUND_TX:
-                fileFullPath = IB_TX_LOG_FILE_DIR;
-                break;
-            case OUTBOUND_TX:
-                fileFullPath = TX_LOG_FILE_DIR;
-                break;
-            case TX_POLLING:
-                fileFullPath = POLL_LOG_FILE_DIR;
+            case INBOUND_TX: fileFullPath = IB_TX_LOG_FILE_DIR;
+            break;
+            case OUTBOUND_TX: fileFullPath = TX_LOG_FILE_DIR;
+            break;
+            case TX_POLLING: fileFullPath = POLL_LOG_FILE_DIR;
         }
 
         if (fileFullPath != null) logFile = new File(fileFullPath);
-        assert logFile != null;
         if (!logFile.exists()) {
             logFile.mkdir();
             boolean newFile = logFile.createNewFile();
+
+
         }
     }
 
@@ -144,13 +144,16 @@ public class TransactionFileLogger {
         initializeTxLogFile(LogType.TX_POLLING);
         String pollMessage = message + "\n";
 
-        String pollLogFileFullPath = POLL_LOG_FILE_DIR + "/" + POLLING_LOG;
+        String pollLogFileFullPath =  POLL_LOG_FILE_DIR + "/" + POLLING_LOG;
         File logFile = new File(pollLogFileFullPath);
         try (FileWriter logWriter = new FileWriter(logFile, true)) {
             logWriter.write(pollMessage);
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
+
+
+
     }
 
     public static boolean isAreSettingsInitialized() {

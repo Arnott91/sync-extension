@@ -11,7 +11,6 @@ import org.neo4j.graphdb.Transaction;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
-
 /**
  * com.neo4j.sync.engine.Configuration class is designed to load dynamic replication configuration information
  * from a number of sources depending on the initialization method called.  Configuration can be read
@@ -21,6 +20,19 @@ import java.util.Map;
  */
 
 public class Configuration {
+
+    // the existing value was used for my testing.
+    // if you do read from a config, it will be a relative
+    // path, pointing to the import directory
+    private static final String CONFIG_FILE_PATH = "c:/CONFIG/";
+    private static final String CONFIG_FILE_NAME = "replication.conf";
+    private static File configFile = null;
+    private static JSONObject config = null;
+    // field unused but the thinking is there may be a case where you want to
+    // use only defaults and not load a file or read a db.  Maybe for testing.
+    private boolean useDefaults = true;
+    private static boolean initialized = false;
+    private static int BATCH_SIZE = 100;
 
     public static final String REPLICATION_SETTINGS_LABEL = "ReplicationSettings";
     public static final String REPLICATION_SETTINGS_PK_VALUE = "singleton";
@@ -35,11 +47,7 @@ public class Configuration {
     public static final String POLLING_FILE_KEY = "pollingFile";
     public static final String CONFIGURATION_KEY = "configuration";
     public static final String REPLICATION_SETTINGS_PK = "id";
-    // the existing value was used for my testing.
-    // if you do read from a config, it will be a relative
-    // path, pointing to the import directory
-    private static final String CONFIG_FILE_PATH = "c:/CONFIG/";
-    private static final String CONFIG_FILE_NAME = "replication.conf";
+
     // TODO:  if setAllParameters is tested, then don't initialize with defaults here.
     public static String TX_LOG_FILE_DIR = "c:/OUTBOUND_TX";
     public static String TX_RB_LOG_FILE_DIR = "c:/ROLLBACK_OUTBOUND_TX";
@@ -49,18 +57,12 @@ public class Configuration {
     public static String TX_LOG_FILE_NAME = "outbound_tx.log";
     public static String TX_RB_LOG_FILE_NAME = "rb_outbound_tx.log";
     public static String POLLING_LOG = "tx_poll.log";
-    private static File configFile = null;
-    private static JSONObject config = null;
-    private static boolean initialized = false;
-    private static int BATCH_SIZE = 100;
-    private static Map<String, Object> logSettings;
-    // field unused but the thinking is there may be a case where you want to
-    // use only defaults and not load a file or read a db.  Maybe for testing.
-    private final boolean useDefaults = true;
 
     public static Map<String, Object> getLogSettings() {
         return logSettings;
     }
+    private static Map<String, Object> logSettings;
+
 
     public static void InitializeFromNeoConf(Config neo4jConfig) {
         // TODO: initialize ReplicationSettings node in database
@@ -97,6 +99,7 @@ public class Configuration {
             }
         }
     }
+
     private static void initializeJSON() throws JSONException {
         // TODO: grab and read parameters from the neo4j.conf if possible
         // OTHERWISE:  // grab the internal config object and get replication specific parameters.
@@ -106,7 +109,7 @@ public class Configuration {
         if (isInitialized()) {
             configFile = new File(CONFIG_FILE_PATH + CONFIG_FILE_NAME);
             config = new JSONObject(configFile.toString());
-            BATCH_SIZE = Integer.parseInt(((JSONObject) (new JSONObject(configFile.toString())).get(CONFIGURATION_KEY)).get(BATCH_SIZE_KEY).toString());
+            BATCH_SIZE = Integer.parseInt(((JSONObject) ( new JSONObject(configFile.toString())).get(CONFIGURATION_KEY)).get(BATCH_SIZE_KEY).toString());
         }
     }
 
@@ -118,7 +121,7 @@ public class Configuration {
 
         configFile = new File(CONFIG_FILE_NAME);
         config = new JSONObject(configFile.toString());
-        BATCH_SIZE = Integer.parseInt(((JSONObject) (new JSONObject(configFile.toString())).get(CONFIGURATION_KEY)).get(BATCH_SIZE_KEY).toString());
+        BATCH_SIZE = Integer.parseInt(((JSONObject) ( new JSONObject(configFile.toString())).get(CONFIGURATION_KEY)).get(BATCH_SIZE_KEY).toString());
     }
 
     private static void setAllParameters(Node parameters) {
@@ -127,14 +130,13 @@ public class Configuration {
         BATCH_SIZE = Integer.parseInt(parameters.getProperty(BATCH_SIZE_KEY, 100).toString());
         logSettings = new HashMap<>();
         logSettings.put("TX_LOG_FILE_DIR", parameters.getProperty(OUT_BOUND_TX_DIR_KEY, TX_LOG_FILE_DIR));
-        logSettings.put("TX_RB_LOG_FILE_DIR", parameters.getProperty(OUT_BOUND_RB_DIR_KEY, TX_RB_LOG_FILE_DIR));
+        logSettings.put("TX_RB_LOG_FILE_DIR" ,parameters.getProperty(OUT_BOUND_RB_DIR_KEY, TX_RB_LOG_FILE_DIR));
         logSettings.put("IB_TX_LOG_FILE_DIR", parameters.getProperty(IN_BOUND_TX_DIR_KEY, IB_TX_LOG_FILE_DIR));
         logSettings.put("TX_LOG_FILE_NAME_IN", parameters.getProperty(IN_BOUND_TX_LOG_FILE_KEY, TX_LOG_FILE_NAME_IN));
         logSettings.put("POLL_LOG_FILE_DIR", parameters.getProperty(Configuration.POLLING_DIR_KEY, POLL_LOG_FILE_DIR));
         logSettings.put("TX_LOG_FILE_NAME", parameters.getProperty(OUT_BOUND_TX_LOG_FILE_KEY, TX_LOG_FILE_NAME));
         logSettings.put("TX_RB_LOG_FILE_NAME", parameters.getProperty(IN_BOUND_RB_TX_FILE_KEY, TX_RB_LOG_FILE_NAME));
         logSettings.put("POLLING_LOG", parameters.getProperty(POLLING_FILE_KEY, POLLING_LOG));
-
     }
 
     private static void setAllParameters(Config neo4jConfig) {
@@ -150,7 +152,6 @@ public class Configuration {
         logSettings.put("TX_LOG_FILE_NAME", neo4jConfig.getSetting(OUT_BOUND_TX_LOG_FILE_KEY));
         logSettings.put("TX_RB_LOG_FILE_NAME", neo4jConfig.getSetting(IN_BOUND_RB_TX_FILE_KEY));
         logSettings.put("POLLING_LOG", neo4jConfig.getSetting(POLLING_FILE_KEY));
-
     }
 }
 

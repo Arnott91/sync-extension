@@ -5,7 +5,6 @@ import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.net.ServerAddress;
-
 import java.util.Arrays;
 import java.util.HashSet;
 
@@ -20,17 +19,18 @@ import java.util.HashSet;
 
 public class AddressResolver {
 
-    public static Driver createDriver(String virtualUri, String user, String password, String[] hostNames) {
+    public static Driver createDriver(String virtualUri, String user, String password, String[] hostNames )
+    {
         // *** UNTESTED ***
         // pass the array of host names and get back ServerAddress objects
         ServerAddress[] servers = getClusterAddresses(virtualUri, hostNames);
         // build the configuration object with a resolver
         Config config = Config.builder()
-                .withResolver(address -> new HashSet<>(Arrays.asList(servers)))
+                .withResolver( address -> new HashSet<>( Arrays.asList( servers ) ) )
                 .build();
         // the driver construction method will now use the configuration to
         // round-robin choose an available host to establish a connection.
-        return GraphDatabase.driver(virtualUri, AuthTokens.basic(user, password), config);
+        return GraphDatabase.driver( virtualUri, AuthTokens.basic( user, password ), config );
     }
 
     private static ServerAddress[] getClusterAddresses(String virtualUri, String[] hostNames) {

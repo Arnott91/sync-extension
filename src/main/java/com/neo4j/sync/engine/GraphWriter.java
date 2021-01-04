@@ -5,7 +5,6 @@ import org.codehaus.jettison.json.JSONObject;
 import org.neo4j.graphdb.*;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
-
 import java.util.List;
 import java.util.Map;
 
@@ -77,7 +76,7 @@ public class GraphWriter {
                     case DELETE_NODE:
                         this.delegateCRUDOperation(v, ChangeType.DELETE_NODE);
                         break;
-                    case NODE_PROPERTY_CHANGE:
+                   case NODE_PROPERTY_CHANGE:
                         this.delegateCRUDOperation(v, ChangeType.NODE_PROPERTY_CHANGE);
                         break;
                     case ADD_RELATION:
@@ -270,7 +269,7 @@ public class GraphWriter {
         // get the array of labels
         String[] labels = TransactionDataParser.getNodeLabels(event);
         // get the collection of properties
-        Map<String, Object> properties = TransactionDataParser.getNodeProperties(event);
+        Map<String,Object> properties = TransactionDataParser.getNodeProperties(event);
 
 
         try (Transaction tx = graphDb.beginTx()) {

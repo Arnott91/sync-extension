@@ -3,12 +3,17 @@ package com.neo4j.sync.procedures;
 import com.neo4j.sync.engine.AddressResolver;
 import com.neo4j.sync.engine.ReplicationEngine;
 import com.neo4j.sync.engine.TransactionFileLogger;
-import org.neo4j.driver.Driver;
+import org.neo4j.codegen.api.Add;
+import org.neo4j.driver.*;
+import org.neo4j.driver.net.ServerAddress;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.*;
 
 import java.io.IOException;
 import java.sql.Date;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.stream.Stream;
 
 /**
@@ -44,14 +49,15 @@ public class StartAndStopReplicationProcedures {
             @Name(value = "username") String username,
             @Name(value = "password") String password) {
 
-        String[] hostNames = new String[3];
-        hostNames[0] = hostName1;
-        hostNames[1] = hostName2;
-        hostNames[2] = hostName3;
+            String[] hostNames = new String[3];
+            hostNames[0] = hostName1;
+            hostNames[1] = hostName2;
+            hostNames[2] = hostName3;
 
 
-        Driver driver = AddressResolver.createDriver(virtualRemoteDatabaseURI1, username, password, hostNames);
-        ReplicationEngine.initialize(virtualRemoteDatabaseURI1, username, password, hostNames).start();
+
+            Driver driver = AddressResolver.createDriver(virtualRemoteDatabaseURI1, username, password, hostNames);
+            ReplicationEngine.initialize(virtualRemoteDatabaseURI1, username, password, hostNames).start();
 
         log.info("Replication from %s started.", virtualRemoteDatabaseURI1);
     }
@@ -63,7 +69,9 @@ public class StartAndStopReplicationProcedures {
             @Name(value = "password") String password) {
 
 
-        Driver driver = AddressResolver.createDriver(virtualRemoteDatabaseURI1, username, password, hostNames);
+
+
+                Driver driver = AddressResolver.createDriver(virtualRemoteDatabaseURI1, username, password, hostNames);
         ReplicationEngine.initialize(virtualRemoteDatabaseURI1, username, password, hostNames).start();
 
         log.info("Replication from %s started.", virtualRemoteDatabaseURI1);
@@ -95,6 +103,8 @@ public class StartAndStopReplicationProcedures {
             this.status = status.toString().toLowerCase();
         }
     }
+
+
 
 
 }
