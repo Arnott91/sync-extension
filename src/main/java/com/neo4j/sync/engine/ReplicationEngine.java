@@ -8,7 +8,7 @@ import org.neo4j.logging.Log;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.sql.Date;
+import java.util.Date;
 import java.util.Calendar;
 import java.util.Set;
 import java.util.concurrent.Executors;
@@ -121,7 +121,6 @@ public class ReplicationEngine {
                                 try {
                                     replicate(a);
                                     TransactionFileLogger.AppendPollingLog(String.format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()));
-
 
                                 } catch (JSONException | IOException e) {
                                     e.printStackTrace();
