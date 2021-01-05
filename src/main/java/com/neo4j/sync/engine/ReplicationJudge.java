@@ -21,6 +21,7 @@ public class ReplicationJudge {
     // if you must defy Neo4j coding conventions and define properties with uppercase names then
     //TODO: consider either changing properties to lowercase or change all uuid references to UUID.
     public static final String UUID = "uuid";
+    public static final String TRANSACTION_RECORD = "TransactionRecord";
     private static boolean NAY = false;
     private static boolean YEA = true;
 
@@ -39,7 +40,8 @@ public class ReplicationJudge {
 
             Iterable<LabelEntry> labels = data.assignedLabels();
             for (LabelEntry le : labels)
-                if (le.label().name().equals(LOCAL_TX) || le.label().name().equals(DO_NOT_REPLICATE))
+                if (le.label().name().equals(LOCAL_TX) || le.label().name().equals(DO_NOT_REPLICATE) ||
+                        le.label().name().equals(TRANSACTION_RECORD))
                     votes = votes & NAY;
                 if (votes == NAY) System.out.println("an assigned label either was LocaTx or DoNotReplicate: NAY");
         }

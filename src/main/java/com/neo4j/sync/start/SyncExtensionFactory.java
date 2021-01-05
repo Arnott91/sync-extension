@@ -101,11 +101,14 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
         @Override
         public void start() throws Exception {
             //log.info("check if auto is enabled and kick off the replication engine");
+            // call a static method to get a handle to the Config object (neo4j.conf)
             availabilityGuard.addListener(new AvailabilityListener() {
                 @Override
                 public void available() {
                    System.out.println("Some db is available");
                 }
+
+
 
                 @Override
                 public void unavailable() {

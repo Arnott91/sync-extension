@@ -85,19 +85,6 @@ public class ReplicationEngineTest {
 
 
 
-    @Test
-    public void shouldBeLogging() throws Exception{
-        // Given
-        assertNotNull(graphDatabaseAPI);
-        ReplicationEngine engine = ReplicationEngine.initialize(NEO_4_J_REMOTE_URI, "username", "password", graphDatabaseAPI, Set.of(hostNames));
-
-        // When
-        engine.testPolling(2);
-        //pause(120);
-
-        // Then
-        //assertEquals(STOPPED, engine.status());
-    }
 
     public static void pause(double seconds)
     {

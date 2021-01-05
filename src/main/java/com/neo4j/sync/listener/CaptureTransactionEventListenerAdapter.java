@@ -121,7 +121,7 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
             } finally {
                 logTransaction = false;
             }
-
+            // TODO:  Figure out how to handle TransactionRecord nodes that don't have an InternalTransactionId
             try (Transaction tx = sourceDatabase.beginTx()) {
                 Node txRecordNode = tx.findNode(Label.label(TX_RECORD_LABEL), TX_RECORD_NODE_BEFORE_COMMIT_KEY, beforeCommitTxId);
                 txRecordNode.setProperty("internalTransactionId", data.getTransactionId());

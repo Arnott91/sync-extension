@@ -3,6 +3,7 @@ package com.neo4j.sync.engine;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.neo4j.configuration.Config;
+import org.neo4j.driver.net.ServerAddress;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -10,6 +11,7 @@ import org.neo4j.graphdb.Transaction;
 
 import java.io.File;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 /**
  * com.neo4j.sync.engine.Configuration class is designed to load dynamic replication configuration information
@@ -152,6 +154,11 @@ public class Configuration {
         logSettings.put("TX_LOG_FILE_NAME", neo4jConfig.getSetting(OUT_BOUND_TX_LOG_FILE_KEY));
         logSettings.put("TX_RB_LOG_FILE_NAME", neo4jConfig.getSetting(IN_BOUND_RB_TX_FILE_KEY));
         logSettings.put("POLLING_LOG", neo4jConfig.getSetting(POLLING_FILE_KEY));
+    }
+
+    //TODO: imlement getServerAddresses method
+    public static List<ServerAddress> getServerAddresses() {
+        return null;
     }
 }
 

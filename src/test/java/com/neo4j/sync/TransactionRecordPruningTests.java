@@ -54,6 +54,8 @@ public class TransactionRecordPruningTests {
 
     private String createTRQuery = "CREATE (tr:TransactionRecord) SET tr.uuid = randomUUID(), tr.timeCreated = ";
     private String countAllTRs = "MATCH (tr:TransactionRecord) RETURN COUNT(tr) as trCount;";
+    private String countAllTRsWithTxData = "MATCH (tr:TransactionRecord) WHERE EXISTS(tr.transactionData) " +
+                                            "RETURN COUNT(tr) as trCount;";
     private  String pruneTRQuery = "MATCH (tr:TransactionRecord) WHERE tr.timeCreated < %d DETACH DELETE tr";
 
     @BeforeEach
@@ -125,6 +127,33 @@ public class TransactionRecordPruningTests {
             // should only be four left after we prune.
 
             assertEquals(4,countPruneResult.next().get("trCount").asInt());
+
+
+        }
+    }
+
+
+    @Test
+    public void pruneOldTransactionRecordsTest2() throws Exception {
+
+
+        try (Driver driver = driver(new URI("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
+
+            Session session = driver.session(SessionConfig.builder().withDatabase(DEFAULT_DATABASE_NAME).build());
+
+            // first, let's write six transaction records going back six days.
+
+            for (int i = 0; i < 6; i++) {
+                session.run(createTRQuery + daysAgo(i));
+            }
+            Result countResult = session.run(countAllTRsWithTxData);
+
+            // make sure there are no replicas in the database
+
+            assertEquals(0,(countResult.next().get("trCount").asInt()));
+
+            // now let's get rid of all TransactionRecord nodes with a timeCreated older than six days from now.
+
 
 
         }

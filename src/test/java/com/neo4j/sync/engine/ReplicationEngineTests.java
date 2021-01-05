@@ -162,6 +162,9 @@ public class ReplicationEngineTests {
 
         engine.testPolling(2);
 
+        // TODO: assert that data was written locally
+
+
 
 
 

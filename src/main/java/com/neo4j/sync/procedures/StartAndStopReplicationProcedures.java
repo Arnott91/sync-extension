@@ -78,7 +78,8 @@ public class StartAndStopReplicationProcedures {
 
         log.info("Replication from %s started.", virtualRemoteDatabaseURI1);
     }
-
+    // virtual URI example:  x.example.com is the virtual URI
+    // hostnames are a.example.com, b.example.com, c.example.com
     public synchronized void startReplication(
             @Name(value = "virtualRemoteDatabaseURI1") String virtualRemoteDatabaseURI1,
             @Name(value = "hostNames") String[] hostNames,

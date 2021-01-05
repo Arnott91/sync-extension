@@ -109,9 +109,10 @@ public class ReplicationEngine {
                 e.printStackTrace();
             }
             System.out.println("Grabbing the last timestamp");
+            // find the last transaction replicated and get it's timestamp
             this.lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(gds);
             System.out.println("Grabbed the last timestamp");
-
+            // pull all TransactionRecord nodes newer than last replicated.
             Result runReplication = driver.session().run(format(REPLICATION_QUERY, lastTransactionTimestamp));
 
 
@@ -132,6 +133,10 @@ public class ReplicationEngine {
                 }
             }
             System.out.println("Starting pruning");
+            // TODO: run pruning locally
+            // change to run this locally
+            // instead of using the driver and running the query at the remote
+            // do Transaction tx = gdbs.beginTx(format(PRUNE_QUERY, getThreeDaysAgo()));
 
             Result runPrune = driver.session().run(format(PRUNE_QUERY, getThreeDaysAgo()));
             int recordsPruned = runPrune.single().get("deleted").asInt();
@@ -223,7 +228,7 @@ public class ReplicationEngine {
         Value transactionTime = record.get("tr.timeCreated");
         if (!record.get("tr.transactionData").asString().equals(ST_DATA_JSON)) {
 
-            // grab the transaction JSON data from the Transa)ctionRecord node
+            // grab the transaction JSON data from the TransactionRecord node
 
             String transactionData = record.get("tr.transactionData").asString();
 
