@@ -25,80 +25,74 @@ import java.util.stream.Collectors;
 /**
  * Creates a
  */
-final class UberJar implements AutoCloseable
-{
-    private final Map<String,Set<String>> serviceDeclarations = new HashMap<>();
+final class UberJar implements AutoCloseable {
+    private final Map<String, Set<String>> serviceDeclarations = new HashMap<>();
     private final Path destination;
     private final boolean skipTestClasses;
     private FileOutputStream out;
     private JarOutputStream target;
 
-    UberJar( Path destination )
-    {
-        this( destination, true );
+    UberJar(Path destination) {
+        this(destination, true);
     }
 
-    UberJar( Path destination, boolean skipTestClasses )
-    {
+    UberJar(Path destination, boolean skipTestClasses) {
         this.destination = destination;
         this.skipTestClasses = skipTestClasses;
     }
 
-    public void start() throws IOException
-    {
-        Manifest manifest = new Manifest();
-        manifest.getMainAttributes().put( Attributes.Name.MANIFEST_VERSION, "1.0" );
+    private static void writeJarEntry(FileTime time, JarOutputStream target, String location, InputStream inputStream) throws IOException {
+        JarEntry entry = new JarEntry(location.replace("\\", "/"));
+        entry.setTime(time.toMillis());
 
-        this.out = new FileOutputStream( destination.toFile() );
-        this.target = new JarOutputStream( out, manifest );
+        target.putNextEntry(entry);
+        inputStream.transferTo(target);
+        target.closeEntry();
     }
 
-    public void addClass( Path source )
-    {
-        throwIfNotAClass( source );
+    public void start() throws IOException {
+        Manifest manifest = new Manifest();
+        manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
 
-        try
-        {
-            Pattern pattern = Pattern.compile( ".*[/\\\\]target[/\\\\](test-)?classes[/\\\\]" );
-            MatchResult result = pattern.matcher( source.toString() ).results().collect( Collectors.toList() ).get( 0 );
-            if ( skipTestClasses && result.group().replaceAll("\\\\", "/").endsWith( "/test-classes/" ) )
-            {
+        this.out = new FileOutputStream(destination.toFile());
+        this.target = new JarOutputStream(out, manifest);
+    }
+
+    public void addClass(Path source) {
+        throwIfNotAClass(source);
+
+        try {
+            Pattern pattern = Pattern.compile(".*[/\\\\]target[/\\\\](test-)?classes[/\\\\]");
+            MatchResult result = pattern.matcher(source.toString()).results().collect(Collectors.toList()).get(0);
+            if (skipTestClasses && result.group().replaceAll("\\\\", "/").endsWith("/test-classes/")) {
                 return;
             }
 
-            Path root = Path.of( result.group() );
+            Path root = Path.of(result.group());
 
-            Path services = Path.of( root.toString(), "META-INF", "services" );
-            if ( Files.exists( services ) )
-            {
-                for ( Path f : Files.list( services ).collect( Collectors.toList() ) )
-                {
+            Path services = Path.of(root.toString(), "META-INF", "services");
+            if (Files.exists(services)) {
+                for (Path f : Files.list(services).collect(Collectors.toList())) {
                     String filename = f.getFileName().toString();
-                    serviceDeclarations.putIfAbsent( filename, new HashSet<>() );
-                    serviceDeclarations.get( filename ).addAll( Files.readAllLines( f ) );
+                    serviceDeclarations.putIfAbsent(filename, new HashSet<>());
+                    serviceDeclarations.get(filename).addAll(Files.readAllLines(f));
                 }
             }
-            String location = source.toString().split( "[/\\\\]target[/\\\\](test-)?classes[/\\\\]" )[1];
-            try ( FileInputStream inputStream = new FileInputStream( source.toFile() ) )
-            {
-                writeJarEntry( Files.getLastModifiedTime( source ), target, location, inputStream );
+            String location = source.toString().split("[/\\\\]target[/\\\\](test-)?classes[/\\\\]")[1];
+            try (FileInputStream inputStream = new FileInputStream(source.toFile())) {
+                writeJarEntry(Files.getLastModifiedTime(source), target, location, inputStream);
             }
-        }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( e );
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    private void throwIfNotAClass( Path source )
-    {
-        if ( !source.getFileName().toString().endsWith( ".class" ) )
-        {
-            throw new IllegalArgumentException( "only class files are supported" );
+    private void throwIfNotAClass(Path source) {
+        if (!source.getFileName().toString().endsWith(".class")) {
+            throw new IllegalArgumentException("only class files are supported");
         }
-        if ( Files.isDirectory( source ) )
-        {
-            throw new IllegalArgumentException( "A directory is not a class" );
+        if (Files.isDirectory(source)) {
+            throw new IllegalArgumentException("A directory is not a class");
         }
     }
 
@@ -107,61 +101,38 @@ final class UberJar implements AutoCloseable
      *
      * @throws IOException
      */
-    public void writeServiceDeclarations() throws IOException
-    {
-        final FileTime time = FileTime.from( Instant.now() );
+    public void writeServiceDeclarations() throws IOException {
+        final FileTime time = FileTime.from(Instant.now());
 
-        for ( var serviceDeclaration : serviceDeclarations.entrySet() )
-        {
+        for (var serviceDeclaration : serviceDeclarations.entrySet()) {
             String serviceName = serviceDeclaration.getKey();
             Set<String> serviceImplementations = serviceDeclaration.getValue();
 
-            try ( ByteArrayInputStream inputStream = new ByteArrayInputStream( String.join( "\n", serviceImplementations ).getBytes() ) )
-            {
-                writeJarEntry( time, target, Path.of( "META-INF", "services", serviceName ).toString(), inputStream );
+            try (ByteArrayInputStream inputStream = new ByteArrayInputStream(String.join("\n", serviceImplementations).getBytes())) {
+                writeJarEntry(time, target, Path.of("META-INF", "services", serviceName).toString(), inputStream);
             }
         }
     }
 
     @Override
-    public void close()
-    {
+    public void close() {
         RuntimeException errors = new RuntimeException();
-        if ( target != null )
-        {
-            try
-            {
+        if (target != null) {
+            try {
                 target.close();
-            }
-            catch ( IOException e )
-            {
-                errors.addSuppressed( e );
+            } catch (IOException e) {
+                errors.addSuppressed(e);
             }
         }
-        if ( out != null )
-        {
-            try
-            {
+        if (out != null) {
+            try {
                 out.close();
-            }
-            catch ( IOException e )
-            {
-                errors.addSuppressed( e );
+            } catch (IOException e) {
+                errors.addSuppressed(e);
             }
         }
-        if ( errors.getSuppressed().length > 0 )
-        {
+        if (errors.getSuppressed().length > 0) {
             throw errors;
         }
-    }
-
-    private static void writeJarEntry( FileTime time, JarOutputStream target, String location, InputStream inputStream ) throws IOException
-    {
-        JarEntry entry = new JarEntry( location.replace( "\\", "/" ) );
-        entry.setTime( time.toMillis() );
-
-        target.putNextEntry( entry );
-        inputStream.transferTo( target );
-        target.closeEntry();
     }
 }

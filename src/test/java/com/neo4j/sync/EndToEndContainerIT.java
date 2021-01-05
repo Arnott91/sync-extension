@@ -21,19 +21,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @NeedsCausalCluster(neo4jVersion = "4.2", createMultipleClusters = true)
 public class EndToEndContainerIT {
-    private static final String myPlugin = "myPlugin.jar";
-
-    private static final AuthToken authToken = AuthTokens.basic("neo4j", "password");
-
     public static final String INTEGRATION_DB_NAME_1 = "IntegrationdbOne";
     public static final String INTEGRATION_DB_NAME_2 = "IntegrationdbTwo";
-
+    private static final String myPlugin = "myPlugin.jar";
+    private static final AuthToken authToken = AuthTokens.basic("neo4j", "password");
     @CausalCluster
     private static Neo4jCluster clusterOne;
-    private String clusterOneInternalAddress;
-
     @CausalCluster
     private static Neo4jCluster clusterTwo;
+    private String clusterOneInternalAddress;
     private String clusterTwoInternalAddress;
 
     private SessionConfig sessionConfigOne;

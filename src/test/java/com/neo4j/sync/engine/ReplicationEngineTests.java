@@ -2,38 +2,22 @@ package com.neo4j.sync.engine;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.configuration.CausalClusteringSettings;
-import com.neo4j.sync.engine.GraphWriter;
-import com.neo4j.sync.engine.TransactionHistoryManager;
 import com.neo4j.sync.listener.CaptureTransactionEventListenerAdapter;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
-import org.junit.jupiter.api.*;
-import org.neo4j.configuration.Config;
-import org.neo4j.driver.Record;
-import org.neo4j.driver.Result;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.neo4j.driver.*;
-import org.neo4j.graphdb.*;
-import org.neo4j.graphdb.event.DatabaseEventContext;
-import org.neo4j.graphdb.event.DatabaseEventListenerAdapter;
-import org.neo4j.kernel.impl.core.PathProxy;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.logging.Log;
-import org.neo4j.server.configuration.ConfigFileBuilder;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.configuration.*;
 
 import java.net.URI;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.sql.Timestamp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.driver.GraphDatabase.driver;
 
@@ -42,18 +26,15 @@ import static org.neo4j.driver.GraphDatabase.driver;
 public class ReplicationEngineTests {
 
 
-    @Inject
-    private ClusterFactory clusterFactory;
-
-    private Cluster sourceCluster;
-    private Cluster targetCluster;
-
     private final ClusterConfig clusterConfig = ClusterConfig
             .clusterConfig()
             .withNumberOfCoreMembers(3)
             .withSharedCoreParam(CausalClusteringSettings.minimum_core_cluster_size_at_formation, "3")
             .withNumberOfReadReplicas(0);
-
+    @Inject
+    private ClusterFactory clusterFactory;
+    private Cluster sourceCluster;
+    private Cluster targetCluster;
     private CaptureTransactionEventListenerAdapter listener;
 
     @BeforeEach
@@ -77,7 +58,7 @@ public class ReplicationEngineTests {
     }
 
     @AfterEach
-    void cleanUp() throws Exception {
+    void cleanUp() {
 
         for (CoreClusterMember coreMember : sourceCluster.coreMembers()) {
             coreMember.managementService().unregisterTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
@@ -85,7 +66,6 @@ public class ReplicationEngineTests {
         for (CoreClusterMember coreMember : targetCluster.coreMembers()) {
             coreMember.managementService().registerTransactionEventListener(DEFAULT_DATABASE_NAME, listener);
         }
-
     }
 
     @Test
@@ -96,7 +76,6 @@ public class ReplicationEngineTests {
             Session session = driver.session(SessionConfig.builder().withDatabase(DEFAULT_DATABASE_NAME).build());
             Result result = session.run("CREATE (p:Person {uuid:'Rosa'})-[:FOLLOWS]->(:Person {uuid:'Karl'}) RETURN p");
             assertEquals(1, result.list().size());
-
         }
 
         CoreClusterMember leader = targetCluster.awaitLeader();
@@ -105,8 +84,6 @@ public class ReplicationEngineTests {
         ReplicationEngine engine = ReplicationEngine.initialize("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress(), "neo4j", "password", defaultDB);
 
         engine.testPolling(3);
-
-
     }
 
     @Test
@@ -120,10 +97,7 @@ public class ReplicationEngineTests {
 
             result = session.run("MATCH (p:Person {uuid:'Rosa'}) DETACH DELETE p");
             assertEquals(0, result.list().size());
-
         }
-
-
 
         CoreClusterMember leader = targetCluster.awaitLeader();
         GraphDatabaseFacade defaultDB = leader.defaultDatabase();
@@ -131,8 +105,6 @@ public class ReplicationEngineTests {
         ReplicationEngine engine = ReplicationEngine.initialize("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress(), "neo4j", "password", defaultDB);
 
         engine.testPolling(2);
-
-
     }
 
     @Test
@@ -147,12 +119,8 @@ public class ReplicationEngineTests {
                     "RETURN count(st)";
 
             Session session = driver.session(SessionConfig.builder().withDatabase(DEFAULT_DATABASE_NAME).build());
-           assertEquals(1, session.run(srQuery).list().size());
-
-
-
+            assertEquals(1, session.run(srQuery).list().size());
         }
-
 
 
         CoreClusterMember leader = targetCluster.awaitLeader();
@@ -162,15 +130,7 @@ public class ReplicationEngineTests {
 
         engine.testPolling(2);
 
-        // TODO: assert that data was written locally
-
-
-
-
-
-
-
-
+        fail("TODO: assert that data was written locally");
     }
 
     @Test
@@ -184,10 +144,7 @@ public class ReplicationEngineTests {
 
             result = session.run("MATCH (p:Person {uuid:'Rosa'}) DETACH DELETE p");
             assertEquals(0, result.list().size());
-
         }
-
-
 
         CoreClusterMember leader = targetCluster.awaitLeader();
         GraphDatabaseFacade defaultDB = leader.defaultDatabase();
@@ -195,11 +152,7 @@ public class ReplicationEngineTests {
         ReplicationEngine engine = ReplicationEngine.initialize("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress(), "neo4j", "password", defaultDB);
 
         engine.testPolling(2);
-
-
     }
-
-
 }
 
 

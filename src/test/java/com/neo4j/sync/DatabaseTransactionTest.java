@@ -2,48 +2,37 @@ package com.neo4j.sync;
 
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.configuration.CausalClusteringSettings;
-import com.neo4j.fabric.shaded.driver.GraphDatabase;
-import com.neo4j.sync.engine.GraphWriter;
-import com.neo4j.sync.engine.TransactionDataParser;
 import com.neo4j.sync.listener.CaptureTransactionEventListenerAdapter;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
-import org.codehaus.jettison.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.logging.Log;
 import org.neo4j.test.extension.Inject;
 
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
 @ClusterExtension
-public class DatabaseTransactionTests {
-    @Inject
-
-
-
-    private ClusterFactory clusterFactory;
-
-    private Cluster cluster;
-
+public class DatabaseTransactionTest {
     private final ClusterConfig clusterConfig = ClusterConfig
             .clusterConfig()
             .withNumberOfCoreMembers(3)
             .withSharedCoreParam(CausalClusteringSettings.minimum_core_cluster_size_at_formation, "3")
             .withNumberOfReadReplicas(0);
+    @Inject
+
+
+    private ClusterFactory clusterFactory;
+    private Cluster cluster;
 
     @BeforeEach
     void setup() throws Exception {
@@ -510,7 +499,7 @@ public class DatabaseTransactionTests {
 
         Transaction tx = graphDb.beginTx();
 
-        try (Result result = tx.execute("SHOW USERS YIELD user as username");) {
+        try (Result result = tx.execute("SHOW USERS YIELD user as username")) {
             while (result.hasNext()) {
                 Map<String, Object> row = result.next();
                 for (String key : result.columns()) {
@@ -542,8 +531,6 @@ public class DatabaseTransactionTests {
             tx.commit();
 
         });
-
-
 
 
     }
