@@ -9,7 +9,9 @@ import org.neo4j.procedure.*;
 
 import java.io.IOException;
 import java.sql.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -45,10 +47,10 @@ public class StartAndStopReplicationProcedures {
             @Name(value = "username") String username,
             @Name(value = "password") String password) {
 
-        String[] hostNames = new String[3];
-        hostNames[0] = hostName1;
-        hostNames[1] = hostName2;
-        hostNames[2] = hostName3;
+        Set<String> hostNames = new HashSet<>();
+        hostNames.add(hostName1);
+        hostNames.add(hostName2);
+        hostNames.add(hostName3);
 
         try {
             Driver driver = AddressResolver.createDriver(virtualRemoteDatabaseURI1, username, password, hostNames);
@@ -62,7 +64,7 @@ public class StartAndStopReplicationProcedures {
     // we can possibly use this as an alternative stored start proc signature.
     public synchronized void startReplication(
             @Name(value = "virtualRemoteDatabaseURI1") String virtualRemoteDatabaseURI1,
-            @Name(value = "hostNames") List<String> hostNames,
+            @Name(value = "hostNames") Set<String> hostNames,
             @Name(value = "username") String username,
             @Name(value = "password") String password) {
 
@@ -85,8 +87,8 @@ public class StartAndStopReplicationProcedures {
 
 
         try {
-            Driver driver = AddressResolver.createDriver(virtualRemoteDatabaseURI1, username, password, hostNames);
-            ReplicationEngine.initialize(virtualRemoteDatabaseURI1, username, password, hostNames).start();
+            Driver driver = AddressResolver.createDriver(virtualRemoteDatabaseURI1, username, password, Set.of(hostNames));
+            ReplicationEngine.initialize(virtualRemoteDatabaseURI1, username, password, Set.of(hostNames)).start();
         } catch (Exception e) {
             e.printStackTrace();
         }

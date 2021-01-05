@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.sql.Date;
 import java.util.Calendar;
-import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -68,27 +68,16 @@ public class ReplicationEngine {
         this.gds = gds;
     }
 
-    public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, String[] hostNames) throws URISyntaxException {
+    public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, Set<String> hostNames) throws URISyntaxException {
         if (instance != null) {
             instance.stop();
         }
 
-        instance = new ReplicationEngine(
-                AddressResolver.createDriver(remoteDatabaseURI, username, password, hostNames));
+        instance = new ReplicationEngine(AddressResolver.createDriver(remoteDatabaseURI, username, password, hostNames));
         return instance();
     }
 
-    public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, List<String> hostNames) throws URISyntaxException {
-        if (instance != null) {
-            instance.stop();
-        }
-
-        instance = new ReplicationEngine(
-                AddressResolver.createDriver(remoteDatabaseURI, username, password, hostNames.toArray(new String[hostNames.size()])));
-        return instance();
-    }
-
-    public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, GraphDatabaseService gds, String[] hostNames) throws URISyntaxException {
+    public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, GraphDatabaseService gds, Set<String> hostNames) throws URISyntaxException {
         if (instance != null) {
             instance.stop();
         }
@@ -166,9 +155,9 @@ public class ReplicationEngine {
 
     public synchronized void testPolling(int polls) throws InterruptedException {
 
-        Runnable replicationRoutine= () -> {
+        Runnable replicationRoutine = () -> {
 
-            runCount ++;
+            runCount++;
             System.out.println("Im running a task!");
             try {
                 TransactionFileLogger.AppendPollingLog(String.format("Polling starting: %d", new Date(System.currentTimeMillis()).getTime()));

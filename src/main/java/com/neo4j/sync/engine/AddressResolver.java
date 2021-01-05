@@ -11,6 +11,7 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * com.neo4j.sync.engine.Address Resolver allows you to provide a virtual uri, username, password and array of hostnames
@@ -23,44 +24,28 @@ import java.util.List;
 
 public class AddressResolver {
 
-    public static Driver createDriver(String virtualUri, String user, String password, String[] hostNames ) throws URISyntaxException
+    public static Driver createDriver(String virtualUri, String user, String password, Set<String> hostNames ) throws URISyntaxException
     {
         // *** UNTESTED ***
         // pass the array of host names and get back ServerAddress objects
-        ServerAddress[] servers = getClusterAddresses(virtualUri, hostNames);
+        Set<ServerAddress> servers = getClusterAddresses(virtualUri, hostNames);
         // build the configuration object with a resolver
         Config config = Config.builder()
-                .withResolver( address -> new HashSet<>( Arrays.asList( servers ) ) )
+                .withResolver( address -> servers )
                 .build();
         // the driver construction method will now use the configuration to
         // round-robin choose an available host to establish a connection.
         return GraphDatabase.driver( virtualUri, AuthTokens.basic( user, password ), config );
     }
 
-    public static Driver createDriver(String virtualUri, String user, String password, List<String> hostNames ) throws URISyntaxException
-    {
-        // *** UNTESTED ***
-        // pass the array of host names and get back ServerAddress objects
-        ServerAddress[] servers = getClusterAddresses(virtualUri, hostNames.toArray(new String[hostNames.size()]));
-        // build the configuration object with a resolver
-        Config config = Config.builder()
-                .withResolver( address -> new HashSet<>( Arrays.asList( servers ) ) )
-                .build();
-        // the driver construction method will now use the configuration to
-        // round-robin choose an available host to establish a connection.
-        return GraphDatabase.driver( virtualUri, AuthTokens.basic( user, password ), config );
-    }
-
-    private static ServerAddress[] getClusterAddresses(String virtualUri, String[] hostNames) throws URISyntaxException {
+    private static Set<ServerAddress> getClusterAddresses(String virtualUri, Set<String> hostNames) throws URISyntaxException {
         // *** UNTESTED ***
         URI uri = new URI(virtualUri);
-        ServerAddress[] serverAddresses = new ServerAddress[hostNames.length];
+        Set<ServerAddress> serverAddresses = new HashSet<>();
 
-        for (int i = 0; i < hostNames.length; i++) {
-
-            serverAddresses[i] = ServerAddress.of(hostNames[i], uri.getPort());
+        for (String hostName : hostNames) {
+            serverAddresses.add(ServerAddress.of(hostName, uri.getPort()));
         }
         return serverAddresses;
-
     }
 }
