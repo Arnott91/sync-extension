@@ -38,6 +38,13 @@ public class AddressResolver {
         return GraphDatabase.driver( virtualUri, AuthTokens.basic( user, password ), config );
     }
 
+    /*
+    DA - added for testing
+     */
+    public static Driver createDriver(String virtualUri, String user, String password) throws URISyntaxException {
+        return GraphDatabase.driver(virtualUri, AuthTokens.basic( user, password ));
+    }
+
     private static Set<ServerAddress> getClusterAddresses(String virtualUri, Set<String> hostNames) throws URISyntaxException {
         // *** UNTESTED ***
         URI uri = new URI(virtualUri);

@@ -77,6 +77,18 @@ public class ReplicationEngine {
         return instance();
     }
 
+    /*
+    DA - added for testing
+     */
+    public static synchronized ReplicationEngine initialize(String remoteDatabaseURI, String username, String password) throws URISyntaxException {
+        if (instance != null) {
+            instance.stop();
+        }
+
+        instance = new ReplicationEngine(AddressResolver.createDriver(remoteDatabaseURI, username, password));
+        return instance();
+    }
+
     public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, GraphDatabaseService gds, Set<String> hostNames) throws URISyntaxException {
         if (instance != null) {
             instance.stop();

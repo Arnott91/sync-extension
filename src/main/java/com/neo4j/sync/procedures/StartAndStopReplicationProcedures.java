@@ -4,6 +4,7 @@ import com.neo4j.sync.engine.AddressResolver;
 import com.neo4j.sync.engine.ReplicationEngine;
 import com.neo4j.sync.engine.TransactionFileLogger;
 import org.neo4j.driver.Driver;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.*;
 
@@ -30,6 +31,9 @@ import java.util.stream.Stream;
 public class StartAndStopReplicationProcedures {
     @Context
     public Log log;
+
+    @Context
+    public GraphDatabaseService gds;
 
     // the idea here would be to provide a virtual URI along with the username
     // and password.  If we are using the JWT functionality we could
@@ -61,6 +65,26 @@ public class StartAndStopReplicationProcedures {
             e.printStackTrace();
         }
     }
+
+    /*
+    DA - added for testing
+     */
+    @Procedure(name = "startReplicationDA", mode = Mode.WRITE)
+    @Description("starts the bilateral replication engine on this server.")
+    public synchronized void startReplication(
+            @Name(value = "virtualRemoteDatabaseURI1") String virtualRemoteDatabaseURI1,
+            @Name(value = "username") String username,
+            @Name(value = "password") String password) {
+
+        try {
+            ReplicationEngine.initialize(virtualRemoteDatabaseURI1, username, password, gds).start();
+
+            log.info("Replication from %s started.", virtualRemoteDatabaseURI1);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     // we can possibly use this as an alternative stored start proc signature.
     public synchronized void startReplication(
             @Name(value = "virtualRemoteDatabaseURI1") String virtualRemoteDatabaseURI1,

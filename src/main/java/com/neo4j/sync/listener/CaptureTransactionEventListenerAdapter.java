@@ -89,6 +89,8 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
 
             }
 
+        } else {
+            logTransaction = false;
         }
         this.justUpdatedTr = false;
 

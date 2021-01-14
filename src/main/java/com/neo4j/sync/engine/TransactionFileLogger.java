@@ -18,10 +18,10 @@ import java.util.Map;
 public class TransactionFileLogger {
     // TO_DO:  Replace hard-coded file and path info with dynamic configuration data.
 
-    private static String TX_LOG_FILE_DIR = "c:/OUTBOUND_TX";
-    private static String TX_RB_LOG_FILE_DIR = "c:/ROLLBACK_OUTBOUND_TX";
-    private static String IB_TX_LOG_FILE_DIR = "c:/INBOUND_TX;";
-    private static String POLL_LOG_FILE_DIR = "c:/POLLING";
+    private static String TX_LOG_FILE_DIR = "/var/lib/neo4j/data/OUTBOUND_TX";
+    private static String TX_RB_LOG_FILE_DIR = "/var/lib/neo4j/data/ROLLBACK_OUTBOUND_TX";
+    private static String IB_TX_LOG_FILE_DIR = "/var/lib/neo4j/data/INBOUND_TX;";
+    private static String POLL_LOG_FILE_DIR = "/var/lib/neo4j/data/POLLING";
     private static String TX_LOG_FILE_NAME_IN = "inbound_tx.log";
     private static String TX_LOG_FILE_NAME = "outbound_tx.log";
     private static String TX_RB_LOG_FILE_NAME = "rb_outbound_tx.log";

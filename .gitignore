@@ -17,3 +17,4 @@ databases
 test-bench/
 devenv.local
 dependency-reduced-pom.xml
+replication.conf

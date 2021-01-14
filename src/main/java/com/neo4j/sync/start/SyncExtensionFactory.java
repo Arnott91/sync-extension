@@ -74,8 +74,7 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
         CaptureTransactionEventListenerAdapter listener;
 
         public static GraphDatabaseService getDatabase(String databaseName) {
-            GraphDatabaseService db = DEPENDENCIES.databaseManagementService().database(databaseName);
-            return db;
+            return DEPENDENCIES.databaseManagementService().database(databaseName);
         }
 
         public static void dbInit () {
@@ -123,11 +122,11 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
 
             System.out.println("calling the start method in the new lifecycle adapter");
             //TODO: Uncomment this line and remove the same initialization code that you'll find in the tests.
-//            if (this.db.databaseName().equalsIgnoreCase("neo4j")) {
-//                System.out.println("registering the listener with the default database");
-//                this.listener = new CaptureTransactionEventListenerAdapter();
-//                this.databaseManagementService.registerTransactionEventListener(this.db.databaseName(), this.listener);
-//            }
+            if (this.db1.databaseName().equalsIgnoreCase("neo4j")) {
+                System.out.println("registering the listener with the default database");
+                this.listener = new CaptureTransactionEventListenerAdapter();
+                this.databaseManagementService.registerTransactionEventListener(this.db1.databaseName(), this.listener);
+            }
 
 
         }
@@ -140,7 +139,7 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
         public void shutdown()
         {
             System.out.println("calling the shutdown method in the new lifecycle adapter");
-            //this.databaseManagementService.unregisterTransactionEventListener(this.db.databaseName(), this.listener);
+            this.databaseManagementService.unregisterTransactionEventListener(this.db1.databaseName(), this.listener);
         }
 
 
