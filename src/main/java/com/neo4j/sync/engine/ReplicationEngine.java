@@ -1,10 +1,13 @@
 package com.neo4j.sync.engine;
 
 import org.codehaus.jettison.json.JSONException;
+import org.neo4j.configuration.BufferingLog;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.*;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
+import org.neo4j.logging.internal.LogService;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -32,22 +35,22 @@ import static java.lang.String.format;
  * @author Chris Upkes
  * @author Jim Webber
  */
-
+@SuppressWarnings("DuplicatedCode")
 public class ReplicationEngine {
     private static final String PRUNE_QUERY = "MATCH (tr:TransactionRecord) WHERE tr.timeCreated < %d DETACH DELETE tr " +
             "RETURN COUNT(tr) as deleted";
-    private final static String ST_DATA_JSON = "{\"statement\":\"true\"}";
+    private static final String ST_DATA_JSON = "{\"statement\":\"true\"}";
     private static ReplicationEngine instance;
     private static int runCount = 0;
     private final Driver driver;
     private final ScheduledExecutorService execService;
-    private final String LOCAL_TIMESTAMP_QUERY = "MATCH (ltr:LastTransactionReplicated {id:'SINGLETON'}) RETURN ltr.lastTimeRecorded";
-    private final String REPLICATION_QUERY = "MATCH (tr:TransactionRecord) " +
+    private static final String LOCAL_TIMESTAMP_QUERY = "MATCH (ltr:LastTransactionReplicated {id:'SINGLETON'}) RETURN ltr.lastTimeRecorded";
+    private static final String REPLICATION_QUERY = "MATCH (tr:TransactionRecord) " +
             "WHERE tr.timeCreated > %d " +
             "RETURN tr.uuid, tr.timeCreated, tr.transactionData, tr.transactionStatement";
-    private final String UPDATE_LAST_TRANSACTION_TIMESTAMP_QUERY = "MERGE (ltr:LastTransactionReplicated {id:'SINGLETON'}) " +
+    private static final String UPDATE_LAST_TRANSACTION_TIMESTAMP_QUERY = "MERGE (ltr:LastTransactionReplicated {id:'SINGLETON'}) " +
             "SET tr.lastTimeRecorded = %d";
-    private final String ST_DATA_VALUE = "NO_STATEMENT";
+    private static final String ST_DATA_VALUE = "NO_STATEMENT";
     private ScheduledFuture<?> scheduledFuture;
     private GraphDatabaseService gds;
     private Log log;
@@ -66,9 +69,10 @@ public class ReplicationEngine {
         this.driver = driver;
         this.execService = Executors.newScheduledThreadPool(1);
         this.gds = gds;
+        this.log = ((GraphDatabaseAPI) gds).getDependencyResolver().resolveDependency( LogService.class ).getUserLog( getClass() );
     }
 
-    public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, Set<String> hostNames) throws URISyntaxException {
+    public static synchronized ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, Set<String> hostNames) throws URISyntaxException {
         if (instance != null) {
             instance.stop();
         }
@@ -77,19 +81,7 @@ public class ReplicationEngine {
         return instance();
     }
 
-    /*
-    DA - added for testing
-     */
-    public static synchronized ReplicationEngine initialize(String remoteDatabaseURI, String username, String password) throws URISyntaxException {
-        if (instance != null) {
-            instance.stop();
-        }
-
-        instance = new ReplicationEngine(AddressResolver.createDriver(remoteDatabaseURI, username, password));
-        return instance();
-    }
-
-    public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, GraphDatabaseService gds, Set<String> hostNames) throws URISyntaxException {
+    public static synchronized ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, GraphDatabaseService gds, Set<String> hostNames) throws URISyntaxException {
         if (instance != null) {
             instance.stop();
         }
@@ -99,7 +91,7 @@ public class ReplicationEngine {
         return instance();
     }
 
-    public synchronized static ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, GraphDatabaseService gds) {
+    public static synchronized ReplicationEngine initialize(String remoteDatabaseURI, String username, String password, GraphDatabaseService gds) {
         if (instance != null) {
             instance.stop();
         }
@@ -116,14 +108,14 @@ public class ReplicationEngine {
     public synchronized void start() {
         scheduledFuture = execService.scheduleAtFixedRate(() -> {
             try {
-                TransactionFileLogger.AppendPollingLog(String.format("Polling starting: %d", new Date(System.currentTimeMillis()).getTime()));
+                TransactionFileLogger.appendPollingLog(String.format("Polling starting: %d", new Date(System.currentTimeMillis()).getTime()), log);
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            System.out.println("Grabbing the last timestamp");
+            log.info("ReplicationEngine -> Grabbing the last timestamp");
             // find the last transaction replicated and get it's timestamp
             this.lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(gds);
-            System.out.println("Grabbed the last timestamp");
+            log.info("ReplicationEngine -> Grabbed the last timestamp");
             // pull all TransactionRecord nodes newer than last replicated.
             Result runReplication = driver.session().run(format(REPLICATION_QUERY, lastTransactionTimestamp));
 
@@ -133,7 +125,7 @@ public class ReplicationEngine {
                     runReplication.forEachRemaining((a) -> {
                                 try {
                                     replicate(a);
-                                    TransactionFileLogger.AppendPollingLog(String.format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()));
+                                    TransactionFileLogger.appendPollingLog(String.format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()), log);
 
                                 } catch (JSONException | IOException e) {
                                     e.printStackTrace();
@@ -144,7 +136,7 @@ public class ReplicationEngine {
                     e.printStackTrace();
                 }
             }
-            System.out.println("Starting pruning");
+            log.info("ReplicationEngine -> Starting pruning");
             // TODO: run pruning locally
             // change to run this locally
             // instead of using the driver and running the query at the remote
@@ -153,12 +145,12 @@ public class ReplicationEngine {
             Result runPrune = driver.session().run(format(PRUNE_QUERY, getThreeDaysAgo()));
             int recordsPruned = runPrune.single().get("deleted").asInt();
 
-            System.out.println(String.format("Pruning complete %d records pruned", recordsPruned));
+            log.info("ReplicationEngine -> Pruning complete %d records pruned", recordsPruned);
 
             try {
-                TransactionFileLogger.AppendPollingLog(String.format("Polling stopping: %d", new Date(System.currentTimeMillis()).getTime()));
-                TransactionFileLogger.AppendPollingLog("Records written since engine start: " + records);
-                TransactionFileLogger.AppendPollingLog("Records pruned: " + recordsPruned);
+                TransactionFileLogger.appendPollingLog(String.format("Polling stopping: %d", new Date(System.currentTimeMillis()).getTime()), log);
+                TransactionFileLogger.appendPollingLog("Records written since engine start: " + records, log);
+                TransactionFileLogger.appendPollingLog("Records pruned: " + recordsPruned, log);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -171,12 +163,14 @@ public class ReplicationEngine {
 
     public synchronized void testPolling(int polls) throws InterruptedException {
 
+        Log bufferingLog = new BufferingLog();
+
         Runnable replicationRoutine = () -> {
 
             runCount++;
             System.out.println("Im running a task!");
             try {
-                TransactionFileLogger.AppendPollingLog(String.format("Polling starting: %d", new Date(System.currentTimeMillis()).getTime()));
+                TransactionFileLogger.appendPollingLog(String.format("Polling starting: %d", new Date(System.currentTimeMillis()).getTime()), bufferingLog);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -192,7 +186,7 @@ public class ReplicationEngine {
                     runReplication.forEachRemaining((a) -> {
                                 try {
                                     replicate(a);
-                                    TransactionFileLogger.AppendPollingLog(String.format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()));
+                                    TransactionFileLogger.appendPollingLog(String.format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()), bufferingLog);
 
 
                                 } catch (JSONException | IOException e) {
@@ -209,25 +203,25 @@ public class ReplicationEngine {
             Result runPrune = driver.session().run(format(PRUNE_QUERY, getThreeDaysAgo()));
             int recordsPruned = runPrune.single().get("deleted").asInt();
 
-            System.out.println(String.format("Pruning complete %d records pruned", recordsPruned));
+            System.out.printf("Pruning complete %d records pruned%n", recordsPruned);
 
             try {
-                TransactionFileLogger.AppendPollingLog(String.format("Polling stopping: %d", new Date(System.currentTimeMillis()).getTime()));
-                TransactionFileLogger.AppendPollingLog("Records written since engine start: " + records);
-                TransactionFileLogger.AppendPollingLog("Records pruned: " + recordsPruned);
+                TransactionFileLogger.appendPollingLog(String.format("Polling stopping: %d", new Date(System.currentTimeMillis()).getTime()), bufferingLog);
+                TransactionFileLogger.appendPollingLog("Records written since engine start: " + records, bufferingLog);
+                TransactionFileLogger.appendPollingLog("Records pruned: " + recordsPruned, bufferingLog);
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
         };
-        ScheduledFuture<?> scheduledFuture = execService.scheduleAtFixedRate(replicationRoutine, 5, 60, TimeUnit.SECONDS);
+        ScheduledFuture<?> scheduler = execService.scheduleAtFixedRate(replicationRoutine, 5, 60, TimeUnit.SECONDS);
 
         while (true) {
             System.out.println("run count :" + runCount);
-            Thread.sleep(10000);
+            scheduler.wait(10000);
             if (runCount == polls) {
-                System.out.println(String.format("Count is %d, cancel the scheduledFuture!", polls));
-                scheduledFuture.cancel(true);
+                System.out.printf("Count is %d, cancel the scheduledFuture!%n", polls);
+                scheduler.cancel(true);
                 execService.shutdown();
                 break;
             }
@@ -250,9 +244,9 @@ public class ReplicationEngine {
                 txHandler.executeCRUDOperation();
                 tx.commit();
             } catch (Exception e) {
-                System.out.printf("Exception: %s%n", e.getMessage());
+                log.error(e.getMessage(), e);
             } finally {
-                System.out.println("completed replication tx");
+                log.info("ReplicationEngine -> Completed replication tx");
             }
 
 
@@ -261,9 +255,9 @@ public class ReplicationEngine {
             try (org.neo4j.graphdb.Transaction tx = gds.beginTx()) {
                 tx.execute(record.get("tr.transactionStatement").asString());
             } catch (Exception e) {
-                System.out.printf("Exception: %s%n", e.getMessage());
+                log.error(e.getMessage(), e);
             } finally {
-                System.out.println("completed replication tx");
+                log.info("ReplicationEngine -> Completed replication tx");
             }
 
         }

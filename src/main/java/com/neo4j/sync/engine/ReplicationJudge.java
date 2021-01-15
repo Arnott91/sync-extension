@@ -6,6 +6,7 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.event.LabelEntry;
 import org.neo4j.graphdb.event.PropertyEntry;
 import org.neo4j.graphdb.event.TransactionData;
+import org.neo4j.logging.Log;
 
 import java.util.Map;
 
@@ -19,23 +20,22 @@ public class ReplicationJudge {
 
     private static final String LOCAL_TX = "LocalTx";
     private static final String DO_NOT_REPLICATE = "DoNotReplicate";
-
-    // if you must defy Neo4j coding conventions and define properties with uppercase names then
-    //TODO: consider either changing properties to lowercase or change all uuid references to UUID.
     private static final String UUID = "uuid";
     private static final String TRANSACTION_RECORD = "TransactionRecord";
     private static final String LAST_TRANSACTION_REPLICATED = "LastTransactionReplicated";
 
+    private ReplicationJudge() {
+        // Private constructor to hide implicit public one
+    }
 
-    // if you must defy Neo4j coding conventions and define properties with uppercase names then
-    //TODO: consider either changing properties to lowercase or change all uuid references to UUID.
+    public static boolean approved(TransactionData data, Log log) {
 
-    public static boolean approved(TransactionData data) {
-
-        logTransactionForTesting(data);
+        if (log.isDebugEnabled()) {
+            logTransactionData(data, log);
+        }
 
         if (data.createdNodes().iterator().hasNext() && !data.assignedLabels().iterator().hasNext()) {
-            System.out.println("nodes were created without labels: NAY");
+            log.debug("ReplicationJudge -> nodes were created without labels: Skip");
             return false;
         }
         if (data.assignedLabels().iterator().hasNext()) {
@@ -44,13 +44,13 @@ public class ReplicationJudge {
             for (LabelEntry le : labels)
                 if (le.label().name().equals(LOCAL_TX) || le.label().name().equals(DO_NOT_REPLICATE) ||
                         le.label().name().equals(TRANSACTION_RECORD)) {
-                    System.out.println("an assigned label either was LocaTx or DoNotReplicate: NAY");
+                    log.debug("ReplicationJudge -> an assigned label either was LocaTx or DoNotReplicate: Skip");
                     return false;
                 }
         }
 
         if (data.createdNodes().iterator().hasNext() && !data.assignedNodeProperties().iterator().hasNext()) {
-            System.out.println("nodes were created without properties : NAY");
+            log.debug("ReplicationJudge -> nodes were created without properties : Skip");
             return false;
         }
 
@@ -59,7 +59,7 @@ public class ReplicationJudge {
             Iterable<Relationship> rels = data.deletedRelationships();
             for (Relationship rel : rels) {
                 if (rel.getStartNode().hasLabel(Label.label(LOCAL_TX))) {
-                    System.out.println("relationships were deleted but were attached to nodes with LocalTX Label : NAY");
+                    log.debug("ReplicationJudge -> relationships were deleted but were attached to nodes with LocalTX label : Skip");
                     return false;
                 }
             }
@@ -68,7 +68,7 @@ public class ReplicationJudge {
             Iterable<Node> nodes = data.deletedNodes();
             for (Node node : nodes) {
                 if (node.hasLabel(Label.label(LOCAL_TX))) {
-                    System.out.println("nodes were deleted but had LocalTx label: NAY");
+                    log.debug("ReplicationJudge -> nodes were deleted but had LocalTx label: Skip");
                     return false;
                 }
             }
@@ -78,7 +78,7 @@ public class ReplicationJudge {
             Iterable<Relationship> rels = data.createdRelationships();
             for (Relationship rel : rels) {
                 if (rel.getStartNode().hasLabel(Label.label(LOCAL_TX))) {
-                    System.out.println("relationships were created but were attached to nodes with LocalTX Label: NAY");
+                    log.debug("ReplicationJudge -> relationships were created but were attached to nodes with LocalTX label: Skip");
                     return false;
                 }
 
@@ -91,8 +91,8 @@ public class ReplicationJudge {
             for (PropertyEntry<Relationship> pe : relPropEntry) {
 
                 if (pe.entity().getStartNode().hasLabel(Label.label(LOCAL_TX)) || !pe.entity().hasProperty(UUID)) {
-                    System.out.println("relationship properties were assigned to nodes with LocalTX label : NAY\n");
-                    System.out.println(" or uuid was assigned to relationship");
+                    log.debug("ReplicationJudge -> relationship properties were assigned to nodes with LocalTX label, " +
+                            "or uuid was assigned to relationship : Skip");
                     return false;
                 }
 
@@ -105,7 +105,7 @@ public class ReplicationJudge {
 
             for (PropertyEntry<Node> ne : nodePropEntry) {
                 if (!ne.entity().hasProperty(UUID)) {
-                    System.out.println("no uuid was assigned to node");
+                    log.debug("ReplicationJudge -> no uuid was assigned to node: Skip");
                     return false;
                 } else {
                     if (lastTransactionReplicatedNodeLabelExists(ne.entity().getLabels())) {
@@ -114,7 +114,8 @@ public class ReplicationJudge {
                 }
             }
         }
-        System.out.println("ReplicationJudge validation passed; returning TRUE");
+
+        log.debug("ReplicationJudge -> Validation passed. Replicating transaction.");
         return true;
     }
 
@@ -130,59 +131,59 @@ public class ReplicationJudge {
         return false;
     }
 
-    private static void logTransactionForTesting(TransactionData data) {
+    private static void logTransactionData(TransactionData data, Log log) {
 
         if (data.assignedLabels().iterator().hasNext()) {
             for (LabelEntry labelEntry : data.assignedLabels()) {
-                System.out.println("LABEL: " + labelEntry.label().name());
+                log.debug("LABEL: " + labelEntry.label().name());
             }
         } else {
-            System.out.println("NO LABELS BEING PICKED UP!!!!!");
+            log.debug("No assigned labels");
         }
 
         if (data.createdNodes().iterator().hasNext()) {
             for (Node node : data.createdNodes()) {
-                printNodeData(node);
+                printNodeData(node, log);
             }
         } else {
-            System.out.println("No created nodes");
+            log.debug("No created nodes");
         }
 
         if (data.assignedNodeProperties().iterator().hasNext()) {
             for (PropertyEntry<Node> propertyEntry : data.assignedNodeProperties()) {
-                System.out.println("PROPERTY: " + propertyEntry.key() + " | " + propertyEntry.value());
-                System.out.println("HAS uuid PROPERTY: " + propertyEntry.entity().hasProperty(UUID));
+                log.debug("PROPERTY: " + propertyEntry.key() + " | " + propertyEntry.value());
+                log.debug("HAS uuid PROPERTY: " + propertyEntry.entity().hasProperty(UUID));
 
                 if (propertyEntry.entity().getLabels().iterator().hasNext()) {
                     for (Label label : propertyEntry.entity().getLabels()) {
-                        System.out.println("Property Entity LABEL: " + label.name());
+                        log.debug("Property Entity LABEL: " + label.name());
                     }
                 } else {
-                    System.out.println("No labels for property root entity!");
+                    log.debug("No labels for property root entity");
                 }
             }
         } else {
-            System.out.println("No assigned node properties");
+            log.debug("No assigned node properties");
         }
 
         if (!data.metaData().isEmpty()) {
             for (Map.Entry<String, Object> entry : data.metaData().entrySet()) {
-                System.out.println("Metadata: " + entry.getKey() + " | " + entry.getValue());
+                log.debug("Metadata: " + entry.getKey() + " | " + entry.getValue());
             }
         } else {
-            System.out.println("No metadata");
+            log.debug("No metadata");
         }
 
     }
 
-    private static void printNodeData(Node node) {
-        System.out.println("NODE ID: " + node.getId());
+    private static void printNodeData(Node node, Log log) {
+        log.debug("NODE ID: " + node.getId());
 
-        System.out.println("NODE Labels: ");
+        log.debug("NODE Labels: ");
         for (Label label : node.getLabels()) {
-            System.out.println(label);
+            log.debug("%s", label);
         }
-        System.out.println("NODE properties: " + node.getAllProperties().toString());
+        log.debug("NODE properties: %s", node.getAllProperties().toString());
     }
 
 }

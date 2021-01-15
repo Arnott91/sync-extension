@@ -1,17 +1,19 @@
 package com.neo4j.sync.listener;
 
 
-import com.neo4j.sync.engine.*;
+import com.neo4j.sync.engine.ReplicationJudge;
+import com.neo4j.sync.engine.TransactionFileLogger;
+import com.neo4j.sync.engine.TransactionRecord;
+import com.neo4j.sync.engine.TransactionRecorder;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.event.LabelEntry;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListener;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.internal.LogService;
 
 
 /**
@@ -27,17 +29,15 @@ import org.neo4j.logging.LogProvider;
  * @author Jim Webber
  */
 public class CaptureTransactionEventListenerAdapter implements TransactionEventListener<Node> {
+
     public static final String LOCAL_TX = "LocalTx";
-
-    //public static final String INTEGRATION_DATABASE = "INTEGRATION.DATABASE";
-
-    private final String TX_RECORD_LABEL = "TransactionRecord";
-    private final String TX_RECORD_NODE_BEFORE_COMMIT_KEY = "transactionUUID";
-    private final String TX_RECORD_STATUS_KEY = "status";
-    private final String TX_RECORD_TX_DATA_KEY = "transactionData";
-    private final String TX_RECORD_CREATE_TIME_KEY = "timeCreated";
-    private final String ST_TX_RECORD_TX_DATA_KEY = "transactionStatement";
-    private final String ST_DATA_VALUE = "NO_STATEMENT";
+    private static final String TX_RECORD_LABEL = "TransactionRecord";
+    private static final String TX_RECORD_NODE_BEFORE_COMMIT_KEY = "transactionUUID";
+    private static final String TX_RECORD_STATUS_KEY = "status";
+    private static final String TX_RECORD_TX_DATA_KEY = "transactionData";
+    private static final String TX_RECORD_CREATE_TIME_KEY = "timeCreated";
+    private static final String ST_TX_RECORD_TX_DATA_KEY = "transactionStatement";
+    private static final String ST_DATA_VALUE = "NO_STATEMENT";
 
     private String beforeCommitTxId;
     private long transactionTimestamp;
@@ -54,13 +54,14 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
         // Remember,  schema transactions cannot include DML transactions.
         // System.out.println(transaction.schema().getIndexes().iterator().next().getName());
 
-        System.out.println("In the beforeCommit method of our event listener");
+        Log log = getLog(sourceDatabase);
+        log.debug("CaptureTransactionEventListenerAdapter -> In the beforeCommit method.");
 
-        if (ReplicationJudge.approved(data) && !this.justUpdatedTr) {
+        if (ReplicationJudge.approved(data, log) && !this.justUpdatedTr) {
             // get a handle to the transaction recorder.  This will grab information from the Transaction Data object
             // and populate a transaction record that we can use to both write a TransactionRecord node to the
             // local database and also to log the transaction in any of the logs.
-            TransactionRecorder txRecorder = new TransactionRecorder(data);
+            TransactionRecorder txRecorder = new TransactionRecorder(data, log);
             TransactionRecord txRecord = txRecorder.serializeTransaction();
             // let's grab the uuid of the transaction and a timestamp for logging in afterCommit and rollback
             // methods.
@@ -81,9 +82,7 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
 
                 tx.commit();
             } catch (Exception e) {
-                // TODO: figure out how to get a working handle to the internal logger.
-                //getLog(sourceDatabase).error(e.getMessage(), e);
-                e.printStackTrace();
+                getLog(sourceDatabase).error(e.getMessage(), e);
             } finally {
                 logTransaction = true;
 
@@ -100,14 +99,19 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
     }
 
     private Log getLog(GraphDatabaseService databaseService) {
-        return ((GraphDatabaseAPI) databaseService).getDependencyResolver().provideDependency(LogProvider.class).get().getLog(this.getClass());
+        return ((GraphDatabaseAPI) databaseService)
+                .getDependencyResolver()
+                .resolveDependency( LogService.class )
+                .getUserLog( getClass() );
     }
 
     @Override
     public void afterCommit(TransactionData data, Node startNode, GraphDatabaseService sourceDatabase) {
+        Log log = getLog(sourceDatabase);
+        log.debug("CaptureTransactionEventListenerAdapter -> In the afterCommit method.");
+
         // log our committed transactions to the transaction log.
         // we can then compare any written nodes in the transaction log that also exist in the rollback logs.
-
 
         // TODO:  uncomment below and TEST
         // if (!Configuration.isInitialized()) Configuration.InitializeFromDB(sourceDatabase);
@@ -115,11 +119,10 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
         // the transaction logging you see below has hard-coded file locations.
         if (logTransaction) {
             try {
-                TransactionFileLogger.AppendTransactionLog(txData, beforeCommitTxId, data.getTransactionId(),
-                        transactionTimestamp);
+                TransactionFileLogger.appendTransactionLog(txData, beforeCommitTxId, data.getTransactionId(),
+                        transactionTimestamp, log);
             } catch (Exception e) {
-                //getLog(sourceDatabase).error(e.getMessage(), e);
-                System.out.println(e.getMessage());
+                log.error(e.getMessage(), e);
             } finally {
                 logTransaction = false;
             }
@@ -131,12 +134,9 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
                 this.justUpdatedTr = true;
                 tx.commit();
             } catch (Exception e) {
-                //getLog(sourceDatabase).error(e.getMessage(), e);
-                e.printStackTrace();
+                log.error(e.getMessage(), e);
             }
         }
-        System.out.println("In the afterCommit method of our event listener");
-
     }
 
     @Override
@@ -144,15 +144,13 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
         // identify transactions that have rolled backed with their transaction UUID values so that we can
         // compare to the transaction log and look for written transaction records that were rolled back.
         // TODO: use the refactored file logger initialized from the database.
-        System.out.println("In the afterRollback method of our event listener");
+        getLog(sourceDatabase).debug("CaptureTransactionEventListenerAdapter -> In the afterRollback method.");
 
         if (replicate) {
             try {
-                TransactionFileLogger.AppendRollbackTransactionLog(this.beforeCommitTxId, this.transactionTimestamp);
+                TransactionFileLogger.appendRollbackTransactionLog(this.beforeCommitTxId, this.transactionTimestamp, getLog(sourceDatabase));
             } catch (Exception e) {
-                // log exception
-                //getLog(sourceDatabase).error(e.getMessage(), e);
-                e.printStackTrace();
+                getLog(sourceDatabase).error(e.getMessage(), e);
             }
         }
     }

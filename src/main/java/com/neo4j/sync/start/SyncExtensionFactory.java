@@ -15,6 +15,7 @@ import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.configuration.*;
 
@@ -46,10 +47,9 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
     public Lifecycle newInstance(final ExtensionContext extensionContext, final Dependencies dependencies)
     {
         final GraphDatabaseAPI db = dependencies.graphdatabaseAPI();
-        final LogService log = dependencies.log();
         final DatabaseManagementService databaseManagementService = dependencies.databaseManagementService();
         final AvailabilityGuard availabilityGuard = dependencies.availabilityGuard();
-        return new SynchronizedGraphDatabaseLifecycle(log, db, dependencies, databaseManagementService);
+        return new SynchronizedGraphDatabaseLifecycle(db, dependencies, databaseManagementService);
     }
     interface Dependencies
     {
@@ -58,18 +58,16 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
         AvailabilityGuard availabilityGuard();
         LogService log();
     }
-    public static class SynchronizedGraphDatabaseLifecycle extends LifecycleAdapter
-    {
+    public static class SynchronizedGraphDatabaseLifecycle extends LifecycleAdapter {
         private static Dependencies DEPENDENCIES = null;
         private static DatabaseManagementService DBMS;
 
         private final GraphDatabaseAPI db1;
         public static GraphDatabaseAPI db2 = null;
         private final Dependencies dependencies;
-        private final LogService log;
+        private final Log log;
         private final DatabaseManagementService databaseManagementService;
         private final AvailabilityGuard availabilityGuard;
-
 
         CaptureTransactionEventListenerAdapter listener;
 
@@ -82,52 +80,40 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
         }
 
 
-        public SynchronizedGraphDatabaseLifecycle(final LogService log, final GraphDatabaseAPI db, final Dependencies dependencies,final DatabaseManagementService databaseManagementService)
-        {
-            this.log = log;
+        public SynchronizedGraphDatabaseLifecycle(final GraphDatabaseAPI db, final Dependencies dependencies,
+                                                  final DatabaseManagementService databaseManagementService) {
+            this.log = db.getDependencyResolver().resolveDependency( LogService.class ).getUserLog( getClass() );
             this.db1 = db;
             this.dependencies = dependencies;
             this.databaseManagementService = databaseManagementService;
             DBMS = databaseManagementService;
             this.DEPENDENCIES = dependencies;
             this.availabilityGuard = dependencies.availabilityGuard();
-
-
-
-
         }
 
         @Override
         public void start() throws Exception {
-            //log.info("check if auto is enabled and kick off the replication engine");
+            log.info("SynchronizedGraphDatabaseLifecycle -> Starting listener");
             // call a static method to get a handle to the Config object (neo4j.conf)
             availabilityGuard.addListener(new AvailabilityListener() {
                 @Override
                 public void available() {
-                   System.out.println("Some db is available");
+                   log.info("SynchronizedGraphDatabaseLifecycle -> DB is available");
                 }
-
-
 
                 @Override
                 public void unavailable() {
                     // Do nothing, the dbms is not available.
-                    System.out.println("Some db is no longer available");
+                    log.info("SynchronizedGraphDatabaseLifecycle -> DB is no longer available");
                 }
             });
             // TODO: determine if we can use methods in the availabilityGuard interface to initialize our app
 
-
-
-
-            System.out.println("calling the start method in the new lifecycle adapter");
-            //TODO: Uncomment this line and remove the same initialization code that you'll find in the tests.
             if (this.db1.databaseName().equalsIgnoreCase("neo4j")) {
-                System.out.println("registering the listener with the default database");
+                log.info("SynchronizedGraphDatabaseLifecycle -> Registering the listener with the default database");
                 this.listener = new CaptureTransactionEventListenerAdapter();
                 this.databaseManagementService.registerTransactionEventListener(this.db1.databaseName(), this.listener);
             }
-
 
         }
 
@@ -138,7 +124,7 @@ public class SyncExtensionFactory extends ExtensionFactory<SyncExtensionFactory.
         @Override
         public void shutdown()
         {
-            System.out.println("calling the shutdown method in the new lifecycle adapter");
+            log.info("SynchronizedGraphDatabaseLifecycle -> Shutting down listener");
             this.databaseManagementService.unregisterTransactionEventListener(this.db1.databaseName(), this.listener);
         }
 

@@ -7,6 +7,7 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.event.LabelEntry;
 import org.neo4j.graphdb.event.PropertyEntry;
 import org.neo4j.graphdb.event.TransactionData;
+import org.neo4j.logging.Log;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -21,21 +22,22 @@ import java.util.Map;
  * @author Chris Upkes
  */
 
+@SuppressWarnings("DuplicatedCode")
 public class TransactionRecorder {
-    // if you must defy Neo4j coding conventions and define properties with uppercase names then
-    //TODO: consider either changing properties to lowercase or change all uuid references to UUID.
+
     public static final String UUID = "uuid";
     private final TransactionData transactionData;
+    private final Log log;
 
-    public TransactionRecorder(TransactionData txData) {
+    public TransactionRecorder(TransactionData txData, Log log) {
         this.transactionData = txData;
+        this.log = log;
     }
 
     // This method works on the transaction data object passed to the constructor
     // and returns a new transaction record object that can be used
     // to write transaction history as a node locally or to a file
     // or another system.
-
     public TransactionRecord serializeTransaction() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
 
@@ -57,49 +59,36 @@ public class TransactionRecorder {
             }
         }
 
-        for (Node createdNode : transactionData.createdNodes())
-        {
+        for (Node createdNode : transactionData.createdNodes()) {
             processAddRemoveNode(createdNode, auditValues, AuditNode.ADD_NODE,
                     transactionData);
         }
 
-        for (Node deletedNode : transactionData.deletedNodes())
-        {
-            processAddRemoveNode(deletedNode, auditValues, AuditNode.DELETE_NODE,
-                    transactionData);
+        for (Node deletedNode : transactionData.deletedNodes()) {
+            processAddRemoveNode(deletedNode, auditValues, AuditNode.DELETE_NODE, transactionData);
         }
 
-        for (PropertyEntry<Node> propertyEntry : transactionData.assignedNodeProperties())
-        {
+        for (PropertyEntry<Node> propertyEntry : transactionData.assignedNodeProperties()) {
             processNodePropertyChange(propertyEntry, auditValues);
         }
 
-        for (PropertyEntry<Node> propertyEntry : transactionData.removedNodeProperties())
-        {
+        for (PropertyEntry<Node> propertyEntry : transactionData.removedNodeProperties()) {
             processNodePropertyChange(propertyEntry, auditValues);
         }
 
-        for (Relationship createdRelationship : transactionData.createdRelationships())
-        {
-            processAddRemoveRelationship(createdRelationship, auditValues,
-                        AuditNode.ADD_RELATION);
+        for (Relationship createdRelationship : transactionData.createdRelationships()) {
+            processAddRemoveRelationship(createdRelationship, auditValues, AuditNode.ADD_RELATION);
         }
 
-        for (Relationship deletedRelationship : transactionData.deletedRelationships())
-        {
-            AuditNode auditNode = processAddRemoveRelationship(deletedRelationship, auditValues,
-                    AuditNode.DELETE_RELATION) ;
+        for (Relationship deletedRelationship : transactionData.deletedRelationships()) {
+            processAddRemoveRelationship(deletedRelationship, auditValues, AuditNode.DELETE_RELATION) ;
         }
 
-        for (PropertyEntry<Relationship> propertyEntry : transactionData
-                .assignedRelationshipProperties())
-        {
+        for (PropertyEntry<Relationship> propertyEntry : transactionData.assignedRelationshipProperties()) {
             processRelationPropertyChange(propertyEntry, auditValues
             );
         }
-        for (PropertyEntry<Relationship> propertyEntry : transactionData
-                .removedRelationshipProperties())
-        {
+        for (PropertyEntry<Relationship> propertyEntry : transactionData.removedRelationshipProperties()) {
             processRelationPropertyChange(propertyEntry, auditValues
             );
         }
@@ -120,10 +109,10 @@ public class TransactionRecorder {
             {
                 if (auditNode.getAudit().getPrimaryKey() == null)
                 {
-                    // This is most likely a deleted node or Add node. Let's check the
-                    // primary
-                    // key
-                    // can be obtained for this node. If not we need to ignore the node.
+                    /*
+                    This is most likely a deleted node or Add node.
+                    Let's check the primary key can be obtained for this node. If not we need to ignore the node.
+                     */
                     if (getDeletedNodePrimaryKey(auditNode) == null)
                     {
                         continue;
@@ -142,10 +131,7 @@ public class TransactionRecorder {
             audits.add(auditNode.getAudit());
         }
         String data = objectMapper.writeValueAsString(audits);
-
-        // just for dev purposes
-        // TODO: remove!
-        System.out.println(data);
+        log.debug("TransactionRecorder -> transaction data: ", data);
 
         return  new TransactionRecord(timestampCreated, "NEW",  objectMapper.writeValueAsString(audits), transactionUUID);
 
@@ -169,9 +155,9 @@ public class TransactionRecorder {
 
             nodeChanges.put(changeType, auditNode);
 
-            if (changeType.equalsIgnoreCase(AuditNode.ADD_NODE))
-            {
-                List<String> nodeLabels = new ArrayList<>();
+            List<String> nodeLabels = new ArrayList<>();
+
+            if (changeType.equalsIgnoreCase(AuditNode.ADD_NODE)) {
                 node.getLabels().forEach(entry -> nodeLabels.add(entry.name()));
 
                 auditNode.getAudit().setNodeLabels(nodeLabels);
@@ -181,7 +167,6 @@ public class TransactionRecorder {
             }
             else
             {
-                List<String> nodeLabels = new ArrayList<>();
                 for (LabelEntry labelEntry : transactionData.removedLabels())
                 {
                     if (labelEntry.node().getId() == node.getId())
@@ -198,10 +183,8 @@ public class TransactionRecorder {
     }
 
     // This method is used to create audit records for add and delete relationship
-    private AuditNode processAddRemoveRelationship(Relationship relationship,
-                                                   Map<Node, Map<String, AuditNode>> auditValues, String changeType
-    )
-    {
+    private void processAddRemoveRelationship(Relationship relationship,
+                                              Map<Node, Map<String, AuditNode>> auditValues, String changeType) {
         Node node = relationship.getStartNode();
         Map<String, AuditNode> nodeChanges = auditValues.get(node);
         AuditNode deletedNode = null;
@@ -264,11 +247,9 @@ public class TransactionRecorder {
 
             nodeChanges.put(getRelationChangeType(changeType, relationship), auditNode);
         }
-        return auditNode;
     }
 
-    private AuditNode checkForDeletedNode(Node node, Map<Node, Map<String, AuditNode>> auditValues)
-    {
+    private AuditNode checkForDeletedNode(Node node, Map<Node, Map<String, AuditNode>> auditValues) {
         AuditNode aNode = null;
         Map<String, AuditNode> nodeChanges = auditValues.get(node);
         if (nodeChanges != null)
@@ -279,10 +260,7 @@ public class TransactionRecorder {
     }
 
     // This method is used to create audit records for node property change
-    private void processNodePropertyChange(PropertyEntry<Node> propertyEntry,
-                                           Map<Node, Map<String, AuditNode>> auditValues
-    )
-    {
+    private void processNodePropertyChange(PropertyEntry<Node> propertyEntry, Map<Node, Map<String, AuditNode>> auditValues) {
         Node node = propertyEntry.entity();
 
         Map<String, AuditNode> nodeChanges = auditValues.computeIfAbsent(node,
@@ -373,8 +351,7 @@ public class TransactionRecorder {
 
     // This method is used to create audit records for relationship property change
     private void processRelationPropertyChange(PropertyEntry<Relationship> propertyEntry,
-                                               Map<Node, Map<String, AuditNode>> auditValues)
-    {
+                                               Map<Node, Map<String, AuditNode>> auditValues) {
         Relationship relationship = propertyEntry.entity();
         Node node = relationship.getStartNode();
         Node endNode = relationship.getEndNode();
@@ -489,22 +466,11 @@ public class TransactionRecorder {
     private Map<String, Object> getNodePrimaryKey(Node n)
     {
         Map<String, Object> keyValues = new HashMap<>();
-        for (Label label : n.getLabels())
-        {
-            List<String> keyList = new ArrayList<>();
-            keyList.add(UUID) ;
-            if (keyList != null)
-            {
-                for (String s : keyList)
-                {
-                    Object o = n.getProperty(s);
-                    if (o != null)
-                    {
-                        keyValues.put(s, o);
-                    }
-                }
-            }
+
+        if (n.getProperty(UUID) != null) {
+            keyValues.put(UUID, n.getProperty(UUID));
         }
+
         if (keyValues.size() == 0)
         {
             keyValues = null;
@@ -522,35 +488,19 @@ public class TransactionRecorder {
             return null;
         }
 
-        for (String label : auditNode.getAudit().getNodeLabels())
-        {
-            List<String> keyList = new ArrayList<>();
-            keyList.add(UUID) ;
-            Map<String, Object> properties = auditNode.getAudit().getAllProperties();
+        Map<String, Object> properties = auditNode.getAudit().getAllProperties();
 
-            if (keyList != null
-                    && properties != null)
-            {
-                for (String s : keyList)
-                {
-                    Object o = properties.get(s);
-                    if (o != null)
-                    {
-                        keyValues.put(s, o);
-                    }
-                }
-            }
+        if (properties != null && properties.get(UUID) != null) {
+                keyValues.put(UUID, properties.get(UUID));
         }
 
-        if (keyValues.size() == 0)
-        {
+        if (keyValues.size() == 0) {
             keyValues = null;
         }
         return keyValues;
     }
 
-    private String getRelationChangeType(String changeType, Relationship r)
-    {
+    private String getRelationChangeType(String changeType, Relationship r) {
         return String.format("%s_%d", changeType, r.getId());
     }
 

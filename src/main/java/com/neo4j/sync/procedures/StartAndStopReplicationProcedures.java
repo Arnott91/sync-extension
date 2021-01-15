@@ -1,9 +1,7 @@
 package com.neo4j.sync.procedures;
 
-import com.neo4j.sync.engine.AddressResolver;
 import com.neo4j.sync.engine.ReplicationEngine;
 import com.neo4j.sync.engine.TransactionFileLogger;
-import org.neo4j.driver.Driver;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.*;
@@ -11,7 +9,6 @@ import org.neo4j.procedure.*;
 import java.io.IOException;
 import java.sql.Date;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -57,7 +54,6 @@ public class StartAndStopReplicationProcedures {
         hostNames.add(hostName3);
 
         try {
-            Driver driver = AddressResolver.createDriver(virtualRemoteDatabaseURI1, username, password, hostNames);
             ReplicationEngine.initialize(virtualRemoteDatabaseURI1, username, password, hostNames).start();
 
             log.info("Replication from %s started.", virtualRemoteDatabaseURI1);
@@ -94,7 +90,6 @@ public class StartAndStopReplicationProcedures {
 
 
         try {
-            Driver driver = AddressResolver.createDriver(virtualRemoteDatabaseURI1, username, password, hostNames);
             ReplicationEngine.initialize(virtualRemoteDatabaseURI1, username, password, hostNames).start();
         } catch (Exception e) {
             e.printStackTrace();
@@ -102,6 +97,7 @@ public class StartAndStopReplicationProcedures {
 
         log.info("Replication from %s started.", virtualRemoteDatabaseURI1);
     }
+
     // virtual URI example:  x.example.com is the virtual URI
     // hostnames are a.example.com, b.example.com, c.example.com
     public synchronized void startReplication(
@@ -112,7 +108,6 @@ public class StartAndStopReplicationProcedures {
 
 
         try {
-            Driver driver = AddressResolver.createDriver(virtualRemoteDatabaseURI1, username, password, Set.of(hostNames));
             ReplicationEngine.initialize(virtualRemoteDatabaseURI1, username, password, Set.of(hostNames)).start();
         } catch (Exception e) {
             e.printStackTrace();
@@ -133,7 +128,7 @@ public class StartAndStopReplicationProcedures {
     public Stream<Output> replicationStatus() {
         Output output = new Output(ReplicationEngine.instance().status());
         try {
-            TransactionFileLogger.AppendPollingLog("Procedure starting: " + new Date(System.currentTimeMillis()));
+            TransactionFileLogger.appendPollingLog("Procedure starting: " + new Date(System.currentTimeMillis()), log);
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -1,8 +1,6 @@
 package com.neo4j.sync.engine;
 
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
-import org.neo4j.logging.LogProvider;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -16,7 +14,7 @@ import java.util.Map;
  */
 
 public class TransactionFileLogger {
-    // TO_DO:  Replace hard-coded file and path info with dynamic configuration data.
+    // TODO:  Replace hard-coded file and path info with dynamic configuration data.
 
     private static String TX_LOG_FILE_DIR = "/var/lib/neo4j/data/OUTBOUND_TX";
     private static String TX_RB_LOG_FILE_DIR = "/var/lib/neo4j/data/ROLLBACK_OUTBOUND_TX";
@@ -28,41 +26,69 @@ public class TransactionFileLogger {
     private static String POLLING_LOG = "tx_poll.log";
     private static boolean areSettingsInitialized = false;
 
-    private static void initializeTxLogFile() {
+    private TransactionFileLogger() {
+        // private constructor to hide implicit public one
+    }
+
+    private static void initializeTxLogFile(Log log) {
 
         File logFile = new File(TX_LOG_FILE_DIR);
         if (!logFile.exists()) {
-            logFile.mkdir();
+            createDir(logFile, log);
         }
     }
 
-    private static void initializeTxRollbackLogFile() {
+    private static void initializeTxRollbackLogFile(Log log) {
 
         File logFile = new File(TX_RB_LOG_FILE_DIR);
         if (!logFile.exists()) {
-            logFile.mkdir();
+            createDir(logFile, log);
         }
     }
 
-    private static void initializeTxLogFile(LogType logtype) throws IOException {
+    private static void initializeTxLogFile(LogType logtype, Log log) throws IOException {
 
         String fileFullPath = null;
-        File logFile = null;
+        File logFile;
 
         switch (logtype) {
-            case INBOUND_TX: fileFullPath = IB_TX_LOG_FILE_DIR;
-            break;
-            case OUTBOUND_TX: fileFullPath = TX_LOG_FILE_DIR;
-            break;
-            case TX_POLLING: fileFullPath = POLL_LOG_FILE_DIR;
+            case INBOUND_TX:
+                fileFullPath = IB_TX_LOG_FILE_DIR;
+                break;
+            case OUTBOUND_TX:
+                fileFullPath = TX_LOG_FILE_DIR;
+                break;
+            case TX_POLLING:
+                fileFullPath = POLL_LOG_FILE_DIR;
+                break;
+            default:
+                break;
         }
 
-        if (fileFullPath != null) logFile = new File(fileFullPath);
-        if (!logFile.exists()) {
-            logFile.mkdir();
-            boolean newFile = logFile.createNewFile();
+        if (fileFullPath != null) {
+            logFile = new File(fileFullPath);
 
+            if (!logFile.exists()) {
+                createDir(logFile, log);
+                createLogFile(logFile, log);
+            } else {
+                log.debug("TransactionFileLogger -> Using existing log file");
+            }
 
+        } else {
+            throw new IOException("No file path specified for log file!");
+        }
+    }
+
+    private static void createDir(File logFile, Log log) {
+        if (logFile.mkdir()) {
+            log.debug("TransactionFileLogger -> Log directory created: %s", logFile.getPath());
+        }
+    }
+
+    private static void createLogFile(File logFile, Log log) throws IOException {
+        if (logFile.createNewFile()) {
+            log.debug("TransactionFileLogger -> Log file created");
         }
     }
 
@@ -79,9 +105,9 @@ public class TransactionFileLogger {
 
     }
 
-    public static void AppendTransactionLog(String transactionData, String transactionUUID, long transactionId, long transactionTimestamp, Log log) {
+    public static void appendTransactionLog(String transactionData, String transactionUUID, long transactionId, long transactionTimestamp, Log log) {
 
-        initializeTxLogFile();
+        initializeTxLogFile(log);
 
         String logFileFullPath = TX_LOG_FILE_DIR + "/" + TX_LOG_FILE_NAME;
         String transactionRecord = transactionId + ',' + transactionUUID + ',' + transactionTimestamp + "," + transactionData + "\n";
@@ -94,24 +120,9 @@ public class TransactionFileLogger {
         }
     }
 
-    public static void AppendTransactionLog(String transactionData, String transactionUUID, long transactionId, long transactionTimestamp) {
+    public static void appendRollbackTransactionLog(String transactionUUID, long transactionTimestamp, Log log) {
 
-        initializeTxLogFile();
-
-        String logFileFullPath = TX_LOG_FILE_DIR + "/" + TX_LOG_FILE_NAME;
-        String transactionRecord = transactionId + ',' + transactionUUID + ',' + transactionTimestamp + "," + transactionData + "\n";
-        File logFile = new File(logFileFullPath);
-
-        try (FileWriter logWriter = new FileWriter(logFile, true)) {
-            logWriter.write(transactionRecord);
-        } catch (IOException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    public static void AppendRollbackTransactionLog(String transactionUUID, long transactionTimestamp, Log log) {
-
-        initializeTxRollbackLogFile();
+        initializeTxRollbackLogFile(log);
 
         String rbLogFileFullPath = TX_RB_LOG_FILE_DIR + "/" + TX_RB_LOG_FILE_NAME;
         String rBTransactionRecord = transactionUUID + ',' + transactionTimestamp + "\n";
@@ -124,24 +135,9 @@ public class TransactionFileLogger {
         }
     }
 
-    public static void AppendRollbackTransactionLog(String transactionUUID, long transactionTimestamp) {
+    public static void appendPollingLog(String message, Log log) throws IOException {
 
-        initializeTxRollbackLogFile();
-
-        String rbLogFileFullPath = TX_RB_LOG_FILE_DIR + "/" + TX_RB_LOG_FILE_NAME;
-        String rBTransactionRecord = transactionUUID + ',' + transactionTimestamp + "\n";
-        File logFile = new File(rbLogFileFullPath);
-
-        try (FileWriter logWriter = new FileWriter(logFile, true)) {
-            logWriter.write(rBTransactionRecord);
-        } catch (IOException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    public static void AppendPollingLog(String message) throws IOException {
-
-        initializeTxLogFile(LogType.TX_POLLING);
+        initializeTxLogFile(LogType.TX_POLLING, log);
         String pollMessage = message + "\n";
 
         String pollLogFileFullPath =  POLL_LOG_FILE_DIR + "/" + POLLING_LOG;
@@ -149,7 +145,7 @@ public class TransactionFileLogger {
         try (FileWriter logWriter = new FileWriter(logFile, true)) {
             logWriter.write(pollMessage);
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            log.error(e.getMessage(), e);
         }
 
 
