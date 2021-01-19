@@ -3,16 +3,12 @@ package com.neo4j.sync;
 import com.neo4j.sync.engine.NodeDirection;
 import com.neo4j.sync.engine.NodeFinder;
 import com.neo4j.sync.engine.TransactionDataParser;
-import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.jupiter.api.Test;
 import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Transaction;
-import scala.concurrent.java8.FuturesConvertersImpl;
 
 import javax.inject.Inject;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -29,7 +25,7 @@ public class TransactionDataParserTest {
 
     @Test
     void translateJSONTest() throws JSONException {
-        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
+        JSONObject graphTxTranslation = TransactionDataParser.translateTransactionData(ADD_NODE);
         assertNotNull(graphTxTranslation);
     }
 
@@ -42,8 +38,8 @@ public class TransactionDataParserTest {
             String k = e.getKey();
             assertEquals("AddNode", k);
             JSONObject v = e.getValue();
-            String[] labels = (String[]) TransactionDataParser.getNodeLabels(v);
-            assertEquals("Test", labels[0]);
+            List<String> labels = TransactionDataParser.getNodeLabels(v);
+            assertEquals("Test", labels.get(0));
             // get the collection of properties
             Map<String, Object> properties = TransactionDataParser.getNodeProperties(v);
             assertEquals("123XYZ",properties.get("uuid"));
@@ -61,8 +57,8 @@ public class TransactionDataParserTest {
             String k = e.getKey();
             assertEquals("AddNode", k);
             JSONObject v = e.getValue();
-            String[] labels = (String[]) TransactionDataParser.getNodeLabels(v);
-            assertEquals("Test", labels[0]);
+            List<String> labels = TransactionDataParser.getNodeLabels(v);
+            assertEquals("Test", labels.get(0));
             // get the collection of properties
             Map<String, Object> properties = TransactionDataParser.getNodeProperties(v);
             assertEquals("123XYZ",properties.get("uuid"));
@@ -86,15 +82,15 @@ public class TransactionDataParserTest {
                 Label startSearchLabel = finder.getSearchLabel(NodeDirection.START);
                 Label targetSearchLabel = finder.getSearchLabel(NodeDirection.TARGET);
 
-                String[] startPrimaryKey = finder.getPrimaryKey(NodeDirection.START);
-                String[] targetPrimaryKey = finder.getPrimaryKey(NodeDirection.TARGET);
-                assertEquals("uuid",startPrimaryKey[0]);
-                assertEquals("uuid",targetPrimaryKey[0]);
+                List<String> startPrimaryKey = finder.getPrimaryKey(NodeDirection.START);
+                List<String> targetPrimaryKey = finder.getPrimaryKey(NodeDirection.TARGET);
+                assertEquals("uuid",startPrimaryKey.get(0));
+                assertEquals("uuid",targetPrimaryKey.get(0));
                 assertEquals("Test",startSearchLabel.toString());
                 // Map<String, Object> properties = TransactionDataParser.getRelationProperties(v);
             } else {
-                String[] labels = (String[]) TransactionDataParser.getNodeLabels(v);
-                assertEquals("Test", labels[0]);
+                List<String> labels = TransactionDataParser.getNodeLabels(v);
+                assertEquals("Test", labels.get(0));
                 // get the collection of properties
                 Map<String, Object> properties = TransactionDataParser.getNodeProperties(v);
                 assertEquals("123XYZ",properties.get("uuid"));
@@ -112,8 +108,8 @@ public class TransactionDataParserTest {
             String k = e.getKey();
             assertEquals("NodePropertyChange", k);
             JSONObject v = e.getValue();
-            String[] labels = (String[]) TransactionDataParser.getNodeLabels(v);
-            assertEquals("Test", labels[0]);
+            List<String> labels = TransactionDataParser.getNodeLabels(v);
+            assertEquals("Test", labels.get(0));
             // get the collection of properties
             String[] properties = TransactionDataParser.getRemovedProperties(v);
             assertEquals("test", properties[0]);

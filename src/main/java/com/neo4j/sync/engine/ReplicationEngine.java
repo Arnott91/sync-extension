@@ -168,15 +168,15 @@ public class ReplicationEngine {
         Runnable replicationRoutine = () -> {
 
             runCount++;
-            System.out.println("Im running a task!");
+            log.info("Im running a task!");
             try {
                 TransactionFileLogger.appendPollingLog(String.format("Polling starting: %d", new Date(System.currentTimeMillis()).getTime()), bufferingLog);
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            System.out.println("Grabbing the last timestamp");
+            log.info("Grabbing the last timestamp");
             this.lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(gds);
-            System.out.println("Grabbed the last timestamp");
+            log.info("Grabbed the last timestamp");
 
             Result runReplication = driver.session().run(format(REPLICATION_QUERY, lastTransactionTimestamp));
 
@@ -198,12 +198,12 @@ public class ReplicationEngine {
                     e.printStackTrace();
                 }
             }
-            System.out.println("Starting pruning");
+            log.info("Starting pruning");
 
             Result runPrune = driver.session().run(format(PRUNE_QUERY, getThreeDaysAgo()));
             int recordsPruned = runPrune.single().get("deleted").asInt();
 
-            System.out.printf("Pruning complete %d records pruned%n", recordsPruned);
+            log.info("Pruning complete %d records pruned%n", recordsPruned);
 
             try {
                 TransactionFileLogger.appendPollingLog(String.format("Polling stopping: %d", new Date(System.currentTimeMillis()).getTime()), bufferingLog);
@@ -217,10 +217,10 @@ public class ReplicationEngine {
         ScheduledFuture<?> scheduler = execService.scheduleAtFixedRate(replicationRoutine, 5, 60, TimeUnit.SECONDS);
 
         while (true) {
-            System.out.println("run count :" + runCount);
+            log.info("run count :" + runCount);
             scheduler.wait(10000);
             if (runCount == polls) {
-                System.out.printf("Count is %d, cancel the scheduledFuture!%n", polls);
+                log.info("Count is %d, cancel the scheduledFuture!%n", polls);
                 scheduler.cancel(true);
                 execService.shutdown();
                 break;
@@ -240,7 +240,7 @@ public class ReplicationEngine {
 
 
             try (org.neo4j.graphdb.Transaction tx = gds.beginTx()) {
-                TransactionDataHandler txHandler = new TransactionDataHandler(transactionData, tx);
+                TransactionDataHandler txHandler = new TransactionDataHandler(transactionData, tx, log);
                 txHandler.executeCRUDOperation();
                 tx.commit();
             } catch (Exception e) {

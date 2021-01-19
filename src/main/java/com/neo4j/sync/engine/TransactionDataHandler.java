@@ -2,6 +2,7 @@ package com.neo4j.sync.engine;
 
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.neo4j.configuration.BufferingLog;
 import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
 import java.util.List;
@@ -29,27 +30,16 @@ public class TransactionDataHandler {
     private final Transaction tx;
     private Log log;
 
-
-    public TransactionDataHandler(String transactionData, Transaction tx) throws JSONException {
+    public TransactionDataHandler(String transactionData, Transaction tx, Log log) throws JSONException {
         this.transactionEvents = TransactionDataParser.getTransactionEvents(new JSONObject(transactionData));
         this.tx = tx;
-    }
-
-    public TransactionDataHandler(String transactionData, List<Map<String, JSONObject>> transactionEvents, Transaction tx, Log log) throws JSONException {
-        this.transactionEvents = TransactionDataParser.getTransactionEvents(new JSONObject(transactionData));
         this.log = log;
-        this.tx = tx;
     }
 
     public TransactionDataHandler(JSONObject transactionData, Transaction tx) throws JSONException {
         this.transactionEvents = TransactionDataParser.getTransactionEvents(transactionData);
         this.tx = tx;
-    }
-
-    public TransactionDataHandler(JSONObject transactionData, Transaction tx, Log log) throws JSONException {
-        this.transactionEvents = TransactionDataParser.getTransactionEvents(transactionData);
-        this.log = log;
-        this.tx = tx;
+        this.log = new BufferingLog();
     }
 
     // I do a lot of the same stuff in each delegate CRUD operation, however I'm not really
@@ -120,7 +110,7 @@ public class TransactionDataHandler {
     private void addNode(JSONObject event) throws JSONException {
 
         // get the array of labels
-        String[] labels = (String[]) TransactionDataParser.getNodeLabels(event);
+        List<String> labels = TransactionDataParser.getNodeLabels(event);
         // get the collection of properties
         Map<String, Object> properties = TransactionDataParser.getNodeProperties(event);
 
@@ -142,11 +132,30 @@ public class TransactionDataHandler {
         // could consolidate this into one call of a private method.
         NodeFinder finder = new NodeFinder(event);
         Label searchLabel = finder.getSearchLabel();
-        String[] primaryKey = finder.getPrimaryKey();
 
-        Node foundNode = tx.findNode(searchLabel, primaryKey[0], primaryKey[1]);
-        foundNode.delete();
+        if (null != searchLabel) {
+            log.debug("TransactionDataHandler.deleteNodes -> Found search label: %s", searchLabel.name());
+            List<String> primaryKey = finder.getPrimaryKey();
 
+            if (!primaryKey.isEmpty()) {
+                deleteNodeIfFound(searchLabel, primaryKey);
+            } else {
+                log.debug("TransactionDataHandler.deleteNodes -> Could not find primary key.");
+            }
+        } else {
+            log.debug("TransactionDataHandler.deleteNodes -> No search label found.");
+        }
+    }
+
+    private void deleteNodeIfFound(Label searchLabel, List<String> primaryKey) {
+        log.debug("TransactionDataHandler.deleteNodeIfFound -> Primary key: [" + primaryKey.get(0) + "|" + primaryKey.get(1) + "]");
+        Node foundNode = tx.findNode(searchLabel, primaryKey.get(0), primaryKey.get(1));
+
+        if (null != foundNode) {
+            foundNode.delete();
+        } else {
+            log.debug("TransactionDataHandler.deleteNodeIfFound -> Could not find a node to delete.");
+        }
     }
 
     private void addRelation(JSONObject event) throws JSONException {
@@ -155,16 +164,14 @@ public class TransactionDataHandler {
         Label startSearchLabel = finder.getSearchLabel(NodeDirection.START);
         Label targetSearchLabel = finder.getSearchLabel(NodeDirection.TARGET);
 
-        String[] startPrimaryKey = finder.getPrimaryKey(NodeDirection.START);
-        String[] targetPrimaryKey = finder.getPrimaryKey(NodeDirection.TARGET);
+        List<String> startPrimaryKey = finder.getPrimaryKey(NodeDirection.START);
+        List<String> targetPrimaryKey = finder.getPrimaryKey(NodeDirection.TARGET);
 
-        //Map<String, String> properties = TransactionDataParser.getRelationProperties(event);
         Map<String, Object> properties = TransactionDataParser.getRelationProperties(event);
 
         // first try and find the nodes.  If they don't exist we must create them.
-        Node startNode = tx.findNode(startSearchLabel, startPrimaryKey[0], startPrimaryKey[1]);
-
-        Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0], targetPrimaryKey[1]);
+        Node startNode = tx.findNode(startSearchLabel, startPrimaryKey.get(0), startPrimaryKey.get(1));
+        Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey.get(0), targetPrimaryKey.get(1));
 
         Relationship relationshipFrom = startNode.createRelationshipTo(targetNode, RelationshipType.withName(TransactionDataParser.getRelationType(event)));
         if (properties.size() > 0) properties.forEach(relationshipFrom::setProperty);
@@ -177,12 +184,12 @@ public class TransactionDataHandler {
         Label startSearchLabel = finder.getSearchLabel(NodeDirection.START);
         Label targetSearchLabel = finder.getSearchLabel(NodeDirection.TARGET);
 
-        String[] startPrimaryKey = finder.getPrimaryKey(NodeDirection.START);
-        String[] targetPrimaryKey = finder.getPrimaryKey(NodeDirection.TARGET);
+        List<String> startPrimaryKey = finder.getPrimaryKey(NodeDirection.START);
+        List<String> targetPrimaryKey = finder.getPrimaryKey(NodeDirection.TARGET);
 
 
-        Node startNode = tx.findNode(startSearchLabel, startPrimaryKey[0], startPrimaryKey[1]);
-        Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0], targetPrimaryKey[1]);
+        Node startNode = tx.findNode(startSearchLabel, startPrimaryKey.get(0), startPrimaryKey.get(1));
+        Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey.get(0), targetPrimaryKey.get(1));
 
         for (Relationship relationship : startNode.getRelationships(Direction.OUTGOING, RelationshipType.withName(TransactionDataParser.getRelationType(event)))) {
             if (relationship.getEndNode().equals(targetNode)) relationship.delete();
@@ -199,12 +206,12 @@ public class TransactionDataHandler {
 
         NodeFinder finder = new NodeFinder(event);
         Label searchLabel = finder.getSearchLabel();
-        String[] primaryKey = finder.getPrimaryKey();
+        List<String> primaryKey = finder.getPrimaryKey();
         Map<String, Object> changedProperties = TransactionDataParser.getChangedProperties(event);
         String[] removedPropertyKeys = TransactionDataParser.getRemovedProperties(event);
         // we need the primary key to find the node
 
-        Node foundNode = tx.findNode(searchLabel, primaryKey[0], primaryKey[1]);
+        Node foundNode = tx.findNode(searchLabel, primaryKey.get(0), primaryKey.get(1));
 
         for (String removedPropertyKey : removedPropertyKeys) {
             foundNode.removeProperty(removedPropertyKey);
@@ -222,13 +229,13 @@ public class TransactionDataHandler {
         Label startSearchLabel = finder.getSearchLabel(NodeDirection.START);
         Label targetSearchLabel = finder.getSearchLabel(NodeDirection.TARGET);
 
-        String[] startPrimaryKey = finder.getPrimaryKey(NodeDirection.START);
-        String[] targetPrimaryKey = finder.getPrimaryKey(NodeDirection.TARGET);
+        List<String> startPrimaryKey = finder.getPrimaryKey(NodeDirection.START);
+        List<String> targetPrimaryKey = finder.getPrimaryKey(NodeDirection.TARGET);
         Map<String, Object> properties = TransactionDataParser.getChangedProperties(event);
         String[] removedProperties = TransactionDataParser.getRemovedProperties(event);
 
-        Node startNode = tx.findNode(startSearchLabel, startPrimaryKey[0], startPrimaryKey[1]);
-        Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey[0], targetPrimaryKey[1]);
+        Node startNode = tx.findNode(startSearchLabel, startPrimaryKey.get(0), startPrimaryKey.get(1));
+        Node targetNode = tx.findNode(targetSearchLabel, targetPrimaryKey.get(0), targetPrimaryKey.get(1));
         Relationship singleRelationship = startNode.getSingleRelationship(RelationshipType.withName(TransactionDataParser.getRelationType(event)), Direction.OUTGOING);
         // make sure it's the relationship between the start and target nodes.
 

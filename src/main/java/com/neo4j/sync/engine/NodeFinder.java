@@ -3,6 +3,9 @@ package com.neo4j.sync.engine;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.neo4j.graphdb.Label;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -20,49 +23,51 @@ public class NodeFinder {
         this.event = event;
     }
     // I chose to use arrays because all results are finite...maybe I'm old-school.
-    public String[] getPrimaryKey() throws JSONException {
+    public List<String> getPrimaryKey() throws JSONException {
 
         // in this case the primary key should always be the uuid of the node
         // regardless of what the client believes to be the primary key
         // therefore there will be only one primary key value.
-        Map<String, Object> pk = TransactionDataParser.getPrimaryKey(event);
-        String[] primaryKey = new String[2];
-        for (Map.Entry<String, Object> entry : pk.entrySet()) {
-            primaryKey[0] = entry.getKey();
-            primaryKey[1] = entry.getValue().toString();
+        List<String> primaryKey = new ArrayList<>();
+        for (Map.Entry<String, Object> entry : TransactionDataParser.getPrimaryKey(event).entrySet()) {
+            primaryKey.add(entry.getKey());
+            primaryKey.add(entry.getValue().toString());
         }
-
         return primaryKey;
     }
 
-    public String[] getPrimaryKey(NodeDirection direction) throws JSONException {
-
+    public List<String> getPrimaryKey(NodeDirection direction) throws JSONException {
         // in this case the primary key should always be the uuid of the node
         // regardless of what the client believes to be the primary key
         // therefore there will be only one primary key value.
-        Map<String, Object> pk = TransactionDataParser.getPrimaryKey(event, direction);
-        String[] primaryKey = new String[2];
-        for (Map.Entry<String, Object> entry : pk.entrySet()) {
-            primaryKey[0] = entry.getKey();
-            primaryKey[1] = entry.getValue().toString();
+        List<String> primaryKey = new ArrayList<>();
+        for (Map.Entry<String, Object> entry : TransactionDataParser.getPrimaryKey(event, direction).entrySet()) {
+            primaryKey.add(entry.getKey());
+            primaryKey.add(entry.getValue().toString());
         }
         return primaryKey;
     }
 
     public Label getSearchLabel() throws JSONException {
-
-        // grab the labels from the transaction
-        String[] labels = TransactionDataParser.getNodeLabels(event);
-        // only need to grab the first label - that should be the primary
-        return Label.label(labels[0]);
+        /*
+        Iterate over transaction labels, returning the first label that is not "LocalTx".
+        This should be the primary key.
+         */
+        for (String label : TransactionDataParser.getNodeLabels(event)) {
+            if (!label.equals(TransactionDataParser.LOCAL_TRANSACTION_LABEL)) {
+                return Label.label(label);
+            }
+        }
+        return null;
     }
 
     public Label getSearchLabel(NodeDirection direction) throws JSONException {
-
-        // grab the labels from the transaction
-        String[] labels = TransactionDataParser.getNodeLabels(event, direction);
-        // only need to grab the first label-  that should be the primary
-        return Label.label(labels[0]);
+        for (String label : TransactionDataParser.getNodeLabels(event, direction)) {
+            if (!label.equals(TransactionDataParser.LOCAL_TRANSACTION_LABEL)) {
+                return Label.label(label);
+            }
+        }
+        return null;
     }
 
 

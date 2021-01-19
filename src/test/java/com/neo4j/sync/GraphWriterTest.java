@@ -36,7 +36,7 @@ public class GraphWriterTest {
     @Test
     void addNodeTest1() throws Exception {
         assertNotNull(graphDatabaseAPI);
-        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
+        JSONObject graphTxTranslation = TransactionDataParser.translateTransactionData(ADD_NODE);
         GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI, mock(Log.class));
         graphWriter.executeCRUDOperation();
         Transaction tx = graphDatabaseAPI.beginTx();
@@ -49,7 +49,7 @@ public class GraphWriterTest {
     @Test
     void addNodeTest2() throws Exception {
         assertNotNull(graphDatabaseAPI);
-        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODES_AND_PROPERTIES);
+        JSONObject graphTxTranslation = TransactionDataParser.translateTransactionData(ADD_NODES_AND_PROPERTIES);
         GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI, mock(Log.class));
         graphWriter.executeCRUDOperation();
         Transaction tx = graphDatabaseAPI.beginTx();
@@ -65,7 +65,7 @@ public class GraphWriterTest {
     @Test
     void addNodesAndRelationshipTest1() throws Exception {
         assertNotNull(graphDatabaseAPI);
-        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODES_AND_RELATIONSHIP);
+        JSONObject graphTxTranslation = TransactionDataParser.translateTransactionData(ADD_NODES_AND_RELATIONSHIP);
         GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI, mock(Log.class));
         graphWriter.executeCRUDOperation();
         Transaction tx = graphDatabaseAPI.beginTx();
@@ -81,7 +81,7 @@ public class GraphWriterTest {
     @Test
     void addNodesAndRelationshipsTest1() throws Exception {
         assertNotNull(graphDatabaseAPI);
-        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_MULTIPLE_RELATIONSHIPS);
+        JSONObject graphTxTranslation = TransactionDataParser.translateTransactionData(ADD_MULTIPLE_RELATIONSHIPS);
         GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI, mock(Log.class));
         graphWriter.executeCRUDOperation();
         Transaction tx = graphDatabaseAPI.beginTx();
@@ -100,7 +100,7 @@ public class GraphWriterTest {
     @Test
     void addNodeAndPropertiesTest1() throws Exception {
         assertNotNull(graphDatabaseAPI);
-        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
+        JSONObject graphTxTranslation = TransactionDataParser.translateTransactionData(ADD_NODE);
         GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI, mock(Log.class));
         graphWriter.executeCRUDOperation();
         Transaction tx = graphDatabaseAPI.beginTx();
@@ -113,7 +113,7 @@ public class GraphWriterTest {
     @Test
     void addPropertiesToRelTest1() throws Exception {
         assertNotNull(graphDatabaseAPI);
-        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_PROPERTIES_TO_REL);
+        JSONObject graphTxTranslation = TransactionDataParser.translateTransactionData(ADD_PROPERTIES_TO_REL);
         GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI, mock(Log.class));
         graphWriter.executeCRUDOperation();
         Transaction tx = graphDatabaseAPI.beginTx();
@@ -131,10 +131,10 @@ public class GraphWriterTest {
 
     @Test
     void relPropertyChangeTest1() throws Exception {
-        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODES_AND_RELATIONSHIP);
+        JSONObject graphTxTranslation = TransactionDataParser.translateTransactionData(ADD_NODES_AND_RELATIONSHIP);
         GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI, mock(Log.class));
         graphWriter.executeCRUDOperation();
-        graphTxTranslation = TransactionDataParser.TranslateTransactionData(REL_PROPERTY_CHANGE);
+        graphTxTranslation = TransactionDataParser.translateTransactionData(REL_PROPERTY_CHANGE);
         graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI, mock(Log.class));
         graphWriter.executeCRUDOperation();
         Transaction tx = graphDatabaseAPI.beginTx();
@@ -161,7 +161,7 @@ public class GraphWriterTest {
         myNode.setProperty("test", "foo");
         tx1.commit();
         tx1.close();
-        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(NODE_PROPERTY_CHANGE);
+        JSONObject graphTxTranslation = TransactionDataParser.translateTransactionData(NODE_PROPERTY_CHANGE);
         GraphWriter graphWriter = new GraphWriter(graphTxTranslation, graphDatabaseAPI, mock(Log.class));
         graphWriter.executeCRUDOperation();
         Transaction tx = graphDatabaseAPI.beginTx();

@@ -108,7 +108,7 @@ public class ReplicationJudge {
                     log.debug("ReplicationJudge -> no uuid was assigned to node: Skip");
                     return false;
                 } else {
-                    if (lastTransactionReplicatedNodeLabelExists(ne.entity().getLabels())) {
+                    if (lastTransactionReplicatedNodeLabelExists(ne.entity().getLabels(), log)) {
                         return false;
                     }
                 }
@@ -119,11 +119,11 @@ public class ReplicationJudge {
         return true;
     }
 
-    private static boolean lastTransactionReplicatedNodeLabelExists(Iterable<Label> labels) {
+    private static boolean lastTransactionReplicatedNodeLabelExists(Iterable<Label> labels, Log log) {
         if (labels.iterator().hasNext()) {
             for (Label label : labels) {
                 if (label.name().equals(LAST_TRANSACTION_REPLICATED)) {
-                    System.out.println("Transaction counter. Ignore and skip replication.");
+                    log.debug("Transaction counter. Ignore and skip replication.");
                     return true;
                 }
             }

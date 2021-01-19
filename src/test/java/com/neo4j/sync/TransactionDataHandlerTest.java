@@ -34,7 +34,7 @@ public class TransactionDataHandlerTest {
     void addNodeTest1() throws Exception {
         // passed
         assertNotNull(graphDatabaseAPI);
-        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
+        JSONObject graphTxTranslation = TransactionDataParser.translateTransactionData(ADD_NODE);
         try (Transaction tx = graphDatabaseAPI.beginTx()) {
             TransactionDataHandler graphWriter = new TransactionDataHandler(graphTxTranslation, tx);
             graphWriter.executeCRUDOperation();
@@ -50,7 +50,7 @@ public class TransactionDataHandlerTest {
     @Test
     void addNodeTest2() throws Exception {
         assertNotNull(graphDatabaseAPI);
-        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODES_AND_PROPERTIES);
+        JSONObject graphTxTranslation = TransactionDataParser.translateTransactionData(ADD_NODES_AND_PROPERTIES);
         try (Transaction tx = graphDatabaseAPI.beginTx()) {
             TransactionDataHandler graphWriter = new TransactionDataHandler(graphTxTranslation, tx);
             graphWriter.executeCRUDOperation();
@@ -69,7 +69,7 @@ public class TransactionDataHandlerTest {
     @Test
     void addNodesAndRelationshipTest1() throws Exception {
         assertNotNull(graphDatabaseAPI);
-        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODES_AND_RELATIONSHIP);
+        JSONObject graphTxTranslation = TransactionDataParser.translateTransactionData(ADD_NODES_AND_RELATIONSHIP);
         try (Transaction tx = graphDatabaseAPI.beginTx()) {
             TransactionDataHandler graphWriter = new TransactionDataHandler(graphTxTranslation, tx);
             graphWriter.executeCRUDOperation();
@@ -89,7 +89,7 @@ public class TransactionDataHandlerTest {
     @Test
     void addNodesAndRelationshipsTest1() throws Exception {
         assertNotNull(graphDatabaseAPI);
-        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_MULTIPLE_RELATIONSHIPS);
+        JSONObject graphTxTranslation = TransactionDataParser.translateTransactionData(ADD_MULTIPLE_RELATIONSHIPS);
         try (Transaction tx = graphDatabaseAPI.beginTx()) {
             TransactionDataHandler graphWriter = new TransactionDataHandler(graphTxTranslation, tx);
             graphWriter.executeCRUDOperation();
@@ -111,7 +111,7 @@ public class TransactionDataHandlerTest {
     @Test
     void addNodeAndPropertiesTest1() throws Exception {
         assertNotNull(graphDatabaseAPI);
-        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODE);
+        JSONObject graphTxTranslation = TransactionDataParser.translateTransactionData(ADD_NODE);
         try (Transaction tx = graphDatabaseAPI.beginTx()) {
             TransactionDataHandler graphWriter = new TransactionDataHandler(graphTxTranslation, tx);
             graphWriter.executeCRUDOperation();
@@ -127,7 +127,7 @@ public class TransactionDataHandlerTest {
     @Test
     void addPropertiesToRelTest1() throws Exception {
         assertNotNull(graphDatabaseAPI);
-        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_PROPERTIES_TO_REL);
+        JSONObject graphTxTranslation = TransactionDataParser.translateTransactionData(ADD_PROPERTIES_TO_REL);
         try (Transaction tx = graphDatabaseAPI.beginTx()) {
             TransactionDataHandler graphWriter = new TransactionDataHandler(graphTxTranslation, tx);
             graphWriter.executeCRUDOperation();
@@ -152,13 +152,13 @@ public class TransactionDataHandlerTest {
 
     @Test
     void relPropertyChangeTest1() throws Exception {
-        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(ADD_NODES_AND_RELATIONSHIP);
+        JSONObject graphTxTranslation = TransactionDataParser.translateTransactionData(ADD_NODES_AND_RELATIONSHIP);
         try (Transaction tx = graphDatabaseAPI.beginTx()) {
             TransactionDataHandler graphWriter = new TransactionDataHandler(graphTxTranslation, tx);
             graphWriter.executeCRUDOperation();
             tx.commit();
         }
-        graphTxTranslation = TransactionDataParser.TranslateTransactionData(REL_PROPERTY_CHANGE);
+        graphTxTranslation = TransactionDataParser.translateTransactionData(REL_PROPERTY_CHANGE);
         try (Transaction tx = graphDatabaseAPI.beginTx()) {
             TransactionDataHandler graphWriter = new TransactionDataHandler(graphTxTranslation, tx);
             graphWriter.executeCRUDOperation();
@@ -192,7 +192,7 @@ public class TransactionDataHandlerTest {
         myNode.setProperty("test", "foo");
         tx1.commit();
         tx1.close();
-        JSONObject graphTxTranslation = TransactionDataParser.TranslateTransactionData(NODE_PROPERTY_CHANGE);
+        JSONObject graphTxTranslation = TransactionDataParser.translateTransactionData(NODE_PROPERTY_CHANGE);
         try (Transaction tx = graphDatabaseAPI.beginTx()) {
             TransactionDataHandler graphWriter = new TransactionDataHandler(graphTxTranslation, tx);
             graphWriter.executeCRUDOperation();

@@ -4,10 +4,11 @@ package com.neo4j.sync.engine;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+
+import java.util.*;
+
+import static com.neo4j.sync.engine.NodeDirection.START;
+import static com.neo4j.sync.engine.NodeDirection.TARGET;
 
 /**
  * com.neo4j.sync.engine.TransactionDataParser class is used to decode the JSON transaction data message recorded
@@ -17,11 +18,12 @@ import java.util.Map;
  * @author Chris Upkes
  */
 
+@SuppressWarnings("unchecked")
 public class TransactionDataParser {
 
     public static final String NODE_PROPERTY_CHANGE = "NodePropertyChange";
     public static final String TARGET_PRIMARY_KEY = "targetPrimaryKey";
-    private static final String LOCAL_TRANSACTION_LABEL = "LocalTx";
+    protected static final String LOCAL_TRANSACTION_LABEL = "LocalTx";
     private static final String ADD_NODE_LABEL_KEY = "nodeLabels";
     private static final String TARGET_NODE_LABEL_KEY = "targetNodeLabels";
     public static final String ADD_NODE_PROPERTIES = "AddNodeProperties";
@@ -41,12 +43,13 @@ public class TransactionDataParser {
     public static final String CHANGED_PROPERTIES_KEY = "properties";
     public static final String REGEX = ",";
 
+    private TransactionDataParser() {
+        // private constructor to hide implicit public one
+    }
 
-    public static JSONObject TranslateTransactionData(String transactionData) throws JSONException {
-
+    public static JSONObject translateTransactionData(String transactionData) throws JSONException {
         // wrap the JSON data in a JSON object to make it easy to work with
         return new JSONObject(transactionData);
-
     }
     
     public static List<Map<String, JSONObject>> getTransactionEvents(JSONObject entireTransaction) throws JSONException {
@@ -57,10 +60,8 @@ public class TransactionDataParser {
         JSONArray events = entireTransaction.getJSONArray(TRANSACTION_EVENTS_KEY);
         List<Map<String, JSONObject>> eventsList = new ArrayList<>();
 
-
         // now that we have our list, we need to segregate into event change types.
         // so here we add each event to a list of maps: (change type string, event jason object)
-
 
         // delete nodes sorted first
         sortEvents(events, eventsList, DELETE_NODE);
@@ -111,9 +112,7 @@ public class TransactionDataParser {
 
     }
     public static Map<String, Object> getPrimaryKey(JSONObject nodeEvent) throws JSONException {
-
             return ((JSONObject) nodeEvent.get(PRIMARY_KEY)).toMap();
-
     }
 
     public static Map<String, Object> getPrimaryKey(JSONObject nodeEvent, NodeDirection direction) throws JSONException {
@@ -121,48 +120,37 @@ public class TransactionDataParser {
         switch (direction) {
             case START: return  ((JSONObject) nodeEvent.get(PRIMARY_KEY1)).toMap();
             case TARGET: return ((JSONObject) nodeEvent.get(TARGET_PRIMARY_KEY)).toMap();
-            default: return null;
-
+            default: return Collections.emptyMap();
         }
-
     }
 
-    public static String[] getNodeLabels(JSONObject nodeEvent) throws JSONException {
+    public static List<String> getNodeLabels(JSONObject nodeEvent) throws JSONException {
+        return addLocalTxLabel(nodeEvent, ADD_NODE_LABEL_KEY);
+    }
 
-        // add LOCAL_TX label
-        JSONArray labels = nodeEvent.getJSONArray(ADD_NODE_LABEL_KEY);
+    public static List<String> getTargetNodeLabels(JSONObject nodeEvent) throws JSONException {
+        return addLocalTxLabel(nodeEvent, TARGET_NODE_LABEL_KEY);
+    }
+
+    private static ArrayList<String> addLocalTxLabel(JSONObject nodeEvent, String labelKey) throws JSONException {
+        JSONArray labels = nodeEvent.getJSONArray(labelKey);
         ArrayList<String> transactionLabels = new ArrayList<>();
 
         for (int i = 0; i < labels.length(); i++) {
             transactionLabels.add(labels.get(i).toString());
         }
         transactionLabels.add(LOCAL_TRANSACTION_LABEL);
-       // ArrayUtils..add(transactionLabels, LOCAL_TRANSACTION_LABEL);
-        return transactionLabels.toArray(new String[transactionLabels.size()]);
-
+        return transactionLabels;
     }
 
-    public static String[] getTargetNodeLabels(JSONObject nodeEvent) throws JSONException {
-
-        // add LOCAL_TX label
-        JSONArray labels = nodeEvent.getJSONArray(TARGET_NODE_LABEL_KEY);
-        ArrayList<String> transactionLabels = new ArrayList<>();
-        for (int i = 0; i < labels.length(); i++) {
-            transactionLabels.add(labels.get(i).toString());
+    public static List<String> getNodeLabels(JSONObject nodeEvent, NodeDirection direction) throws JSONException {
+        if (direction == START) {
+            return getNodeLabels(nodeEvent);
+        } else if (direction == TARGET) {
+            return getTargetNodeLabels(nodeEvent);
+        } else {
+            return new ArrayList<>();
         }
-        transactionLabels.add(LOCAL_TRANSACTION_LABEL);
-
-        return transactionLabels.toArray(new String[transactionLabels.size()]);
-    }
-
-
-    public static String[] getNodeLabels(JSONObject nodeEvent, NodeDirection direction) throws JSONException {
-
-        switch (direction) {
-            case START: return getNodeLabels(nodeEvent);
-            case TARGET: return getTargetNodeLabels(nodeEvent);
-        }
-        return null;
     }
 
     public static Map<String, Object> getChangedProperties(JSONObject event) throws JSONException{
