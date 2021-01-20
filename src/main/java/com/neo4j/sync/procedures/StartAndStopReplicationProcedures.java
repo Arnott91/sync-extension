@@ -54,7 +54,7 @@ public class StartAndStopReplicationProcedures {
         hostNames.add(hostName3);
 
         try {
-            ReplicationEngine.initialize(virtualRemoteDatabaseURI1, username, password, hostNames).start();
+            ReplicationEngine.initialize(virtualRemoteDatabaseURI1, username, password, gds, hostNames).start();
 
             log.info("Replication from %s started.", virtualRemoteDatabaseURI1);
         } catch (Exception e) {

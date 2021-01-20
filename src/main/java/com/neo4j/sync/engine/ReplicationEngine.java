@@ -11,14 +11,13 @@ import org.neo4j.logging.internal.LogService;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.Date;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 import static com.neo4j.sync.engine.ReplicationEngine.Status.RUNNING;
 import static com.neo4j.sync.engine.ReplicationEngine.Status.STOPPED;
@@ -122,7 +121,7 @@ public class ReplicationEngine {
 
             if (runReplication.keys() != null && runReplication.hasNext()) {
                 try {
-                    runReplication.forEachRemaining((a) -> {
+                    runReplication.forEachRemaining(a -> {
                                 try {
                                     replicate(a);
                                     TransactionFileLogger.appendPollingLog(String.format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()), log);
@@ -137,14 +136,8 @@ public class ReplicationEngine {
                 }
             }
             log.info("ReplicationEngine -> Starting pruning");
-            // TODO: run pruning locally
-            // change to run this locally
-            // instead of using the driver and running the query at the remote
-            // do Transaction tx = gdbs.beginTx(format(PRUNE_QUERY, getThreeDaysAgo()));
 
-            Result runPrune = driver.session().run(format(PRUNE_QUERY, getThreeDaysAgo()));
-            int recordsPruned = runPrune.single().get("deleted").asInt();
-
+            long recordsPruned = pruneOldRecords();
             log.info("ReplicationEngine -> Pruning complete %d records pruned", recordsPruned);
 
             try {
@@ -159,6 +152,21 @@ public class ReplicationEngine {
 
 
         this.status = RUNNING;
+    }
+
+    private long pruneOldRecords() {
+        try(org.neo4j.graphdb.Transaction tx = gds.beginTx()) {
+            org.neo4j.graphdb.Result pruneResult = tx.execute(format(PRUNE_QUERY, getThreeDaysAgo()));
+
+            if (pruneResult.hasNext()) {
+                tx.commit();
+                return (long) pruneResult.next().get("deleted");
+            }
+            return 0;
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+        }
+        return 0;
     }
 
     public synchronized void testPolling(int polls) throws InterruptedException {
@@ -183,7 +191,7 @@ public class ReplicationEngine {
 
             if (runReplication.keys() != null && runReplication.hasNext()) {
                 try {
-                    runReplication.forEachRemaining((a) -> {
+                    runReplication.forEachRemaining(a -> {
                                 try {
                                     replicate(a);
                                     TransactionFileLogger.appendPollingLog(String.format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()), bufferingLog);
@@ -200,9 +208,7 @@ public class ReplicationEngine {
             }
             log.info("Starting pruning");
 
-            Result runPrune = driver.session().run(format(PRUNE_QUERY, getThreeDaysAgo()));
-            int recordsPruned = runPrune.single().get("deleted").asInt();
-
+            long recordsPruned = pruneOldRecords();
             log.info("Pruning complete %d records pruned%n", recordsPruned);
 
             try {
@@ -228,7 +234,7 @@ public class ReplicationEngine {
         }
     }
 
-    private Consumer<? super Record> replicate(Record record) throws JSONException {
+    private void replicate(Record record) throws JSONException {
 
         // grab the timestamp from the TransactionRecord node
         Value transactionTime = record.get("tr.timeCreated");
@@ -263,8 +269,6 @@ public class ReplicationEngine {
         }
         TransactionHistoryManager.setLastReplicationTimestamp(gds, transactionTime.asLong());
         this.records++;
-
-        return null;
     }
 
     public void stop() {
