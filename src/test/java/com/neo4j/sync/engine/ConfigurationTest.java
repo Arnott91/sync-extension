@@ -18,25 +18,5 @@ class ConfigurationTest {
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
-    @Test
-    public void getConfiguration() throws Exception {
 
-        String configJSON = "{\"configuration\":{\"batchSize\":\"200\",\"outBoundTxLogFileDirectory\":\"c:/OUTBOUND_TX\"}}";
-
-        Writer out = new FileWriter(new File(CONFIG_FILE_NAME).getAbsoluteFile());
-        out.write(configJSON);
-        out.close();
-        assertEquals(Configuration.getBatchSize(true), 200);
-    }
-
-    @Test
-    public void getConfiguration2() throws Exception {
-
-        String configJSON = "{\"configuration\":{\"outBoundTxLogFileDirectory\":\"c:/OUTBOUND_TX\"}}";
-
-        Writer out = new FileWriter(new File(CONFIG_FILE_NAME).getAbsoluteFile());
-        out.write(configJSON);
-        out.close();
-        assertEquals(Configuration.getBatchSize(true), 100);
-    }
 }

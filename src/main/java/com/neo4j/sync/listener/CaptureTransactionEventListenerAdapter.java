@@ -113,13 +113,9 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
         // log our committed transactions to the transaction log.
         // we can then compare any written nodes in the transaction log that also exist in the rollback logs.
 
-        // TODO:  uncomment below and TEST
-        // if (!Configuration.isInitialized()) Configuration.InitializeFromDB(sourceDatabase);
-        // if (!TransactionFileLogger.isAreSettingsInitialized()) TransactionFileLogger.initSettings(Configuration.getLogSettings());
-        // the transaction logging you see below has hard-coded file locations.
         if (logTransaction) {
             try {
-                TransactionFileLogger.appendTransactionLog(txData, beforeCommitTxId, data.getTransactionId(),
+                TransactionFileLogger.appendOutTransactionLog(txData, beforeCommitTxId, data.getTransactionId(),
                         transactionTimestamp, log);
             } catch (Exception e) {
                 log.error(e.getMessage(), e);
