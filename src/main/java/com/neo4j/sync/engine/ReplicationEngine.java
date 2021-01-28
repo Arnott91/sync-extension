@@ -4,6 +4,7 @@ import org.codehaus.jettison.json.JSONException;
 import org.neo4j.configuration.BufferingLog;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.*;
+import org.neo4j.driver.exceptions.Neo4jException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
@@ -157,10 +158,14 @@ public class ReplicationEngine {
     }
 
     private int countTransactionRecords() {
-        Result result = driver.session().run(format(COUNT_QUERY, lastTransactionTimestamp));
+        try{
+            Result result = driver.session().run(format(COUNT_QUERY, lastTransactionTimestamp));
 
-        if (result.hasNext()) {
-            return result.next().get("count").asInt();
+            if (result.hasNext()) {
+                return result.next().get("count").asInt();
+            }
+        } catch (Neo4jException e) {
+            log.warn("Could not create driver session. Reason: %s", e.getMessage());
         }
         return 0;
     }
@@ -169,12 +174,12 @@ public class ReplicationEngine {
         int recordsRemaining = count;
         log.info("Beginning replication with %d records to replicate, and a limiter of %d", recordsRemaining, maxTxSize);
 
-        while (recordsRemaining > 0) {
-            // pull all TransactionRecord nodes newer than last replicated.
-            Result runReplication = driver.session().run(format(REPLICATION_QUERY, lastTransactionTimestamp, maxTxSize));
+        try {
+            while (recordsRemaining > 0) {
+                // pull all TransactionRecord nodes newer than last replicated.
+                Result runReplication = driver.session().run(format(REPLICATION_QUERY, lastTransactionTimestamp, maxTxSize));
 
-            if (runReplication.keys() != null && runReplication.hasNext()) {
-                try {
+                if (runReplication.keys() != null && runReplication.hasNext()) {
                     runReplication.forEachRemaining(a -> {
                                 try {
                                     replicate(a);
@@ -184,13 +189,13 @@ public class ReplicationEngine {
                                 }
                             }
                     );
-                } catch (Exception e) {
-                    log.error(e.getMessage(), e);
                 }
+                recordsRemaining -= maxTxSize;
             }
-            recordsRemaining -= maxTxSize;
+            log.info("Replication complete");
+        } catch (Neo4jException e) {
+            log.warn("Could not create driver session. Reason: %s", e.getMessage());
         }
-        log.info("Replication complete");
     }
 
     private long pruneOldRecords() {
