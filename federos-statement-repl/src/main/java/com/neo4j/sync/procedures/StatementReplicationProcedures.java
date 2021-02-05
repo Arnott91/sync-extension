@@ -20,45 +20,37 @@ import java.util.UUID;
  *
  * @author Chris Upkes
  */
-
 public class StatementReplicationProcedures {
-
 
     @Context
     public Log log;
+
     @Context
     public GraphDatabaseService gds;
 
-
-    private final static String TX_RECORD_LABEL = "TransactionRecord";
-    private final static String TX_RECORD_NODE_BEFORE_COMMIT_KEY = "transactionUUID";
-    private final static String TX_RECORD_STATUS_KEY = "status";
-    private final static String TX_RECORD_TX_DATA_KEY = "transactionData";
-    private final static String TX_RECORD_CREATE_TIME_KEY = "timeCreated";
-    private final static String ST_TX_RECORD_LABEL = "StatementRecord";
-    private final static String ST_TX_RECORD_TX_DATA_KEY = "transactionStatement";
-    private final static String ST_DATA_JSON = "{\"statement\":\"true\"}";
+    private static final String TX_RECORD_LABEL = "TransactionRecord";
+    private static final String TX_RECORD_NODE_BEFORE_COMMIT_KEY = "transactionUUID";
+    private static final String TX_RECORD_STATUS_KEY = "status";
+    private static final String TX_RECORD_TX_DATA_KEY = "transactionData";
+    private static final String TX_RECORD_CREATE_TIME_KEY = "timeCreated";
+    private static final String ST_TX_RECORD_LABEL = "StatementRecord";
+    private static final String ST_TX_RECORD_TX_DATA_KEY = "transactionStatement";
+    private static final String ST_DATA_JSON = "{\"statement\":\"true\"}";
 
     @Procedure(name = "replicateStatement", mode = Mode.WRITE)
-    @Description("commits the statement and creates a StatementRecord for replication.")
+    @Description("Commits the statement and creates a StatementRecord for replication.")
     public void replicateStatement(@Name(value = "statement") String statement) {
         // we we simply execute the statement passed into the procedure
         try (Transaction tx = gds.beginTx()) {
-
             tx.execute(statement);
             tx.commit();
-            log.info("replicating statement: " + statement);
+            log.debug("Replicating statement: " + statement);
         } catch (Exception e) {
-            log.error(e.getMessage());
-            e.printStackTrace();
+            log.error(e.getMessage(), e);
         }
 
-        try (Transaction tx = gds.beginTx()) {
-
-        }
-        //here we create a special TransactionRecord:StatementRecord node
-        // that records the statement string in a property
-
+        /* Here we create a special TransactionRecord:StatementRecord node
+        that records the statement string in a property */
         try (Transaction tx = gds.beginTx()) {
             Node txRecordNode = tx.createNode(Label.label(TX_RECORD_LABEL));
             txRecordNode.addLabel(Label.label(ST_TX_RECORD_LABEL));
@@ -68,10 +60,9 @@ public class StatementReplicationProcedures {
             txRecordNode.setProperty(ST_TX_RECORD_TX_DATA_KEY, statement);
             txRecordNode.setProperty(TX_RECORD_TX_DATA_KEY, ST_DATA_JSON);
             tx.commit();
-            log.info("StatementRecord written for statement: " + statement);
+            log.debug("StatementRecord written for statement: " + statement);
         } catch (Exception e) {
-            log.error(e.getMessage());
-            e.printStackTrace();
+            log.error(e.getMessage(), e);
         }
     }
 }
