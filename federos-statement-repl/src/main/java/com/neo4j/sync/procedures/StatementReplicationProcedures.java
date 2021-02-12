@@ -37,7 +37,7 @@ public class StatementReplicationProcedures {
     private static final String ST_TX_RECORD_TX_DATA_KEY = "transactionStatement";
     private static final String ST_DATA_JSON = "{\"statement\":\"true\"}";
 
-    @Procedure(name = "replicateStatement", mode = Mode.WRITE)
+    @Procedure(name = "replicateStatement", mode = Mode.SCHEMA)
     @Description("Commits the statement and creates a StatementRecord for replication.")
     public void replicateStatement(@Name(value = "statement") String statement) {
         // we we simply execute the statement passed into the procedure

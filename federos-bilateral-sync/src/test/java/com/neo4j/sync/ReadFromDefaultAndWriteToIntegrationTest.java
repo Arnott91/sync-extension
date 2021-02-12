@@ -5,6 +5,7 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.configuration.CausalClusteringSettings;
 import com.neo4j.sync.engine.GraphWriter;
 import com.neo4j.sync.engine.TransactionHistoryManager;
+import com.neo4j.sync.engine.TransactionType;
 import com.neo4j.sync.listener.CaptureTransactionEventListenerAdapter;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
@@ -303,7 +304,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
         CoreClusterMember leader = targetCluster.awaitLeader();
         GraphDatabaseFacade defaultDB = leader.defaultDatabase();
 
-        long lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(defaultDB);
+        long lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(defaultDB, TransactionType.GRAPH);
 
         try (Driver driver = driver(new URI("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
 
@@ -325,7 +326,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             graphWriter.executeCRUDOperation();
 
 
-            TransactionHistoryManager.setLastReplicationTimestamp(defaultDB, transactionTime.asLong());
+            TransactionHistoryManager.setLastReplicationTimestamp(defaultDB, transactionTime.asLong(), TransactionType.GRAPH);
 
 
             org.neo4j.graphdb.Transaction tx = defaultDB.beginTx();
@@ -414,7 +415,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
 
         // grab the timestamp from the last transaction replicated to this cluster.
 
-        long lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(defaultDB);
+        long lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(defaultDB, TransactionType.GRAPH);
 
         try (Driver driver = driver(new URI("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
 
@@ -453,7 +454,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             // let's record the timestamp from the TransactionRecord node locally
             // so we know when the last replica was written.
             // we can then use that timestamp to poll for changes that happen after that timestamp.
-            TransactionHistoryManager.setLastReplicationTimestamp(defaultDB, transactionTime.asLong());
+            TransactionHistoryManager.setLastReplicationTimestamp(defaultDB, transactionTime.asLong(), TransactionType.GRAPH);
 
             // ensure that what the GraphWriter has written to the local database
             // mirrors what was written at the source database
@@ -556,7 +557,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
 
         // grab the timestamp from the last transaction replicated to this cluster.
 
-        long lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(defaultDB);
+        long lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(defaultDB, TransactionType.GRAPH);
 
         try (Driver driver = driver(new URI("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
 
@@ -595,7 +596,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             // let's record the timestamp from the TransactionRecord node locally
             // so we know when the last replica was written.
             // we can then use that timestamp to poll for changes that happen after that timestamp.
-            TransactionHistoryManager.setLastReplicationTimestamp(defaultDB, transactionTime.asLong());
+            TransactionHistoryManager.setLastReplicationTimestamp(defaultDB, transactionTime.asLong(), TransactionType.GRAPH);
 
             // ensure that what the GraphWriter has written to the local database
             // mirrors what was written at the source database
@@ -697,7 +698,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
 
         // grab the timestamp from the last transaction replicated to this cluster.
 
-        long lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(targetDefaultDB);
+        long lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(targetDefaultDB, TransactionType.GRAPH);
 
         try (Driver driver = driver(new URI("bolt://" + sourceCluster.awaitLeader().boltAdvertisedAddress()), AuthTokens.basic("neo4j", "password"))) {
 
@@ -735,7 +736,7 @@ public class ReadFromDefaultAndWriteToIntegrationTest {
             // let's record the timestamp from the TransactionRecord node locally
             // so we know when the last replica was written.
             // we can then use that timestamp to poll for changes that happen after that timestamp.
-            TransactionHistoryManager.setLastReplicationTimestamp(targetDefaultDB, transactionTime.asLong());
+            TransactionHistoryManager.setLastReplicationTimestamp(targetDefaultDB, transactionTime.asLong(), TransactionType.GRAPH);
 
 
             // just for readability, we run a match statement that should succeed

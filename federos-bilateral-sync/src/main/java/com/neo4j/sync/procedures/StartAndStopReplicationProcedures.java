@@ -65,9 +65,9 @@ public class StartAndStopReplicationProcedures {
     /*
     DA - added for testing
      */
-    @Procedure(name = "startReplicationDA", mode = Mode.WRITE)
+    @Procedure(name = "startGraphReplication", mode = Mode.WRITE)
     @Description("starts the bilateral replication engine on this server.")
-    public synchronized void startReplication(
+    public synchronized void startGraphReplication(
             @Name(value = "virtualRemoteDatabaseURI1") String virtualRemoteDatabaseURI1,
             @Name(value = "username") String username,
             @Name(value = "password") String password) {
@@ -75,7 +75,22 @@ public class StartAndStopReplicationProcedures {
         try {
             ReplicationEngine.initialize(virtualRemoteDatabaseURI1, username, password, gds).start();
 
-            log.info("Replication from %s started.", virtualRemoteDatabaseURI1);
+            log.info("Graph replication from %s started.", virtualRemoteDatabaseURI1);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Procedure(name = "startSchemaReplication", mode = Mode.SCHEMA)
+    @Description("starts the bilateral replication engine on this server.")
+    public synchronized void startSchemaReplication(
+            @Name(value = "virtualRemoteDatabaseURI1") String virtualRemoteDatabaseURI1,
+            @Name(value = "username") String username,
+            @Name(value = "password") String password) {
+
+        try {
+            ReplicationEngine.initializeStmtRepl(virtualRemoteDatabaseURI1, username, password, gds).startStmtRepl();
+            log.info("Statement replication from %s started.", virtualRemoteDatabaseURI1);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -116,17 +131,36 @@ public class StartAndStopReplicationProcedures {
         log.info("Replication from %s started.", virtualRemoteDatabaseURI1);
     }
 
-    @Procedure(name = "stopReplication", mode = Mode.WRITE)
+    @Procedure(name = "stopGraphReplication", mode = Mode.WRITE)
     @Description("stops the bilateral replication engine on this server.")
-    public void stopReplication() {
+    public void stopGraphReplication() {
         ReplicationEngine.instance().stop();
-        log.info("Replication stopped.");
+        log.info("Graph replication stopped.");
     }
 
-    @Procedure(name = "replicationStatus", mode = Mode.WRITE)
+    @Procedure(name = "stopSchemaReplication", mode = Mode.SCHEMA)
+    @Description("stops the bilateral replication engine on this server.")
+    public void stopSchemaReplication() {
+        ReplicationEngine.stmtReplInstance().stopStmtRepl();
+        log.info("Schema replication stopped.");
+    }
+
+    @Procedure(name = "graphReplicationStatus", mode = Mode.WRITE)
     @Description("returns whether the replication engine is running on this server.")
-    public Stream<Output> replicationStatus() {
+    public Stream<Output> graphReplicationStatus() {
         Output output = new Output(ReplicationEngine.instance().status());
+        try {
+            TransactionFileLogger.appendPollingLog("Procedure starting: " + new Date(System.currentTimeMillis()), log);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return Stream.of(output);
+    }
+
+    @Procedure(name = "schemaReplicationStatus", mode = Mode.SCHEMA)
+    @Description("returns whether the replication engine is running on this server.")
+    public Stream<Output> schemaReplicationStatus() {
+        Output output = new Output(ReplicationEngine.stmtReplInstance().stmtReplStatus());
         try {
             TransactionFileLogger.appendPollingLog("Procedure starting: " + new Date(System.currentTimeMillis()), log);
         } catch (IOException e) {

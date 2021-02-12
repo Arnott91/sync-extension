@@ -37,13 +37,18 @@ import static java.lang.String.format;
  */
 @SuppressWarnings("DuplicatedCode")
 public class ReplicationEngine {
-    private static final String PRUNE_QUERY = "MATCH (tr:TransactionRecord) WHERE tr.timeCreated < %d DETACH DELETE tr " +
+    private static final String PRUNE_QUERY = "MATCH (tr:TransactionRecord) WHERE NOT tr:StatementRecord AND tr.timeCreated < %d DETACH DELETE tr " +
+            "RETURN COUNT(tr) as deleted";
+    private static final String PRUNE_STMT_QUERY = "MATCH (tr:StatementRecord) WHERE tr.timeCreated < %d DETACH DELETE tr " +
             "RETURN COUNT(tr) as deleted";
     private static final String ST_DATA_JSON = "{\"statement\":\"true\"}";
     private static final String LOCAL_TIMESTAMP_QUERY = "MATCH (ltr:LastTransactionReplicated {id:'SINGLETON'}) RETURN ltr.lastTimeRecorded";
-    private static final String REPLICATION_QUERY = "MATCH (tr:TransactionRecord) WHERE tr.timeCreated > %d " +
+    private static final String REPLICATION_QUERY = "MATCH (tr:TransactionRecord) WHERE NOT tr:StatementRecord AND tr.timeCreated > %d " +
             "RETURN tr.uuid, tr.timeCreated, tr.transactionData, tr.transactionStatement ORDER BY tr.timeCreated LIMIT %d";
-    private static final String COUNT_QUERY = "MATCH (tr:TransactionRecord) WHERE tr.timeCreated > %d RETURN count(tr) AS count";
+    private static final String STMT_REPL_QUERY = "MATCH (tr:StatementRecord) WHERE tr.timeCreated > %d RETURN tr.uuid, " +
+            "tr.timeCreated, tr.transactionData, tr.transactionStatement ORDER BY tr.timeCreated LIMIT %d;";
+    private static final String COUNT_QUERY = "MATCH (tr:TransactionRecord) WHERE NOT tr:StatementRecord AND tr.timeCreated > %d RETURN count(tr) AS count";
+    private static final String COUNT_STMT_QUERY = "MATCH (tr:StatementRecord) WHERE tr.timeCreated > %d RETURN count(tr) AS count";
     private static final String UPDATE_LAST_TRANSACTION_TIMESTAMP_QUERY = "MERGE (ltr:LastTransactionReplicated {id:'SINGLETON'}) " +
             "SET tr.lastTimeRecorded = %d";
     private static final String ST_DATA_VALUE = "NO_STATEMENT";
@@ -52,13 +57,16 @@ public class ReplicationEngine {
     private final ScheduledExecutorService execService;
 
     private static ReplicationEngine instance;
+    private static ReplicationEngine stmtReplInstance;
     private static int runCount = 0;
     private ScheduledFuture<?> scheduledFuture;
+    private ScheduledFuture<?> stmtScheduledFuture;
     private GraphDatabaseService gds;
     private Log log;
     private long lastTransactionTimestamp;
-    private long transactionRecordTimestamp;
-    private Status status;
+    private long lastStmtTxTimestamp;
+    private Status status = STOPPED;
+    private Status stmtReplStatus = STOPPED;
     private int records = 0;
     private int maxTxSize = 1000;
     private int pruningExpireDays = 3;
@@ -107,8 +115,21 @@ public class ReplicationEngine {
         return instance();
     }
 
+    public static synchronized ReplicationEngine initializeStmtRepl(String remoteDatabaseURI, String username, String password, GraphDatabaseService gds) {
+        if (stmtReplInstance != null) {
+            stmtReplInstance.stop();
+        }
+
+        stmtReplInstance = new ReplicationEngine(
+                GraphDatabase.driver(remoteDatabaseURI, AuthTokens.basic(username, password)), gds);
+        return stmtReplInstance;
+    }
+
     public static ReplicationEngine instance() {
         return instance;
+    }
+    public static ReplicationEngine stmtReplInstance() {
+        return stmtReplInstance;
     }
 
     private void initConfig() {
@@ -124,42 +145,76 @@ public class ReplicationEngine {
     public synchronized void start() {
         scheduledFuture = execService.scheduleAtFixedRate(() -> {
             try {
-                TransactionFileLogger.appendPollingLog(String.format("Polling starting: %d", new Date(System.currentTimeMillis()).getTime()), log);
+                TransactionFileLogger.appendPollingLog(String.format("[Graph repl] Polling starting: %d", new Date(System.currentTimeMillis()).getTime()), log);
             } catch (IOException e) {
-                e.printStackTrace();
+                log.error(e.getMessage(), e);
             }
-            log.info("ReplicationEngine -> Grabbing the last timestamp");
+            log.info("ReplicationEngine -> [Graph repl] Grabbing the last timestamp");
             // find the last transaction replicated and get it's timestamp
-            this.lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(gds);
-            log.info("ReplicationEngine -> Grabbed the last timestamp");
+            this.lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(gds, TransactionType.GRAPH);
+            log.info("ReplicationEngine -> [Graph repl] Grabbed the last timestamp");
 
-            int count = countTransactionRecords();
+            int count = countTransactionRecords(COUNT_QUERY, lastTransactionTimestamp);
 
             if (count > 0 && maxTxSize > 0) {
                 startReplicationWithLimiter(count);
             }
-            log.info("ReplicationEngine -> Starting pruning");
+            log.info("ReplicationEngine -> [Graph repl] Starting pruning");
 
-            long recordsPruned = pruneOldRecords();
-            log.info("ReplicationEngine -> Pruning complete %d records pruned", recordsPruned);
+            long recordsPruned = pruneOldRecords(PRUNE_QUERY);
+            log.info("ReplicationEngine -> [Graph repl] Pruning complete %d records pruned", recordsPruned);
 
             try {
-                TransactionFileLogger.appendPollingLog(String.format("Polling stopping: %d", new Date(System.currentTimeMillis()).getTime()), log);
-                TransactionFileLogger.appendPollingLog("Records written since engine start: " + records, log);
-                TransactionFileLogger.appendPollingLog("Records pruned: " + recordsPruned, log);
+                TransactionFileLogger.appendPollingLog(String.format("[Graph repl] Polling stopping: %d", new Date(System.currentTimeMillis()).getTime()), log);
+                TransactionFileLogger.appendPollingLog("[Graph repl] Records written since engine start: " + records, log);
+                TransactionFileLogger.appendPollingLog("[Graph repl] Records pruned: " + recordsPruned, log);
             } catch (IOException e) {
-                e.printStackTrace();
+                log.error(e.getMessage(), e);
             }
 
         }, 0, syncIntervalInSeconds, TimeUnit.SECONDS);
 
-
         this.status = RUNNING;
     }
 
-    private int countTransactionRecords() {
+    public synchronized void startStmtRepl() {
+        stmtScheduledFuture = execService.scheduleAtFixedRate(() -> {
+            try {
+                TransactionFileLogger.appendPollingLog(String.format("[Statement repl] Polling starting: %d", new Date(System.currentTimeMillis()).getTime()), log);
+            } catch (IOException e) {
+                log.error(e.getMessage(), e);
+            }
+            log.info("ReplicationEngine -> [Statement repl] Grabbing the last timestamp");
+            // find the last transaction replicated and get it's timestamp
+            this.lastStmtTxTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(gds, TransactionType.SCHEMA);
+            log.info("ReplicationEngine -> [Statement repl] Grabbed the last timestamp");
+
+            int count = countTransactionRecords(COUNT_STMT_QUERY, lastStmtTxTimestamp);
+
+            if (count > 0 && maxTxSize > 0) {
+                startStmtReplicationWithLimiter(count);
+            }
+            log.info("ReplicationEngine -> [Statement repl] Starting pruning");
+
+            long recordsPruned = pruneOldRecords(PRUNE_STMT_QUERY);
+            log.info("ReplicationEngine -> [Statement repl] Pruning complete %d records pruned", recordsPruned);
+
+            try {
+                TransactionFileLogger.appendPollingLog(String.format("[Statement repl] Polling stopping: %d", new Date(System.currentTimeMillis()).getTime()), log);
+                TransactionFileLogger.appendPollingLog("[Statement repl] Records written since engine start: " + records, log);
+                TransactionFileLogger.appendPollingLog("[Statement repl] Records pruned: " + recordsPruned, log);
+            } catch (IOException e) {
+                log.error(e.getMessage(), e);
+            }
+
+        }, 0, syncIntervalInSeconds, TimeUnit.SECONDS);
+
+        this.stmtReplStatus = RUNNING;
+    }
+
+    private int countTransactionRecords(String query, long timestamp) {
         try{
-            Result result = driver.session().run(format(COUNT_QUERY, lastTransactionTimestamp));
+            Result result = driver.session().run(format(query, timestamp));
 
             if (result.hasNext()) {
                 return result.next().get("count").asInt();
@@ -172,7 +227,7 @@ public class ReplicationEngine {
 
     private void startReplicationWithLimiter(int count) {
         int recordsRemaining = count;
-        log.info("Beginning replication with %d records to replicate, and a limiter of %d", recordsRemaining, maxTxSize);
+        log.info("Beginning graph replication with %d records to replicate, and a limiter of %d", recordsRemaining, maxTxSize);
 
         try {
             while (recordsRemaining > 0) {
@@ -182,9 +237,9 @@ public class ReplicationEngine {
                 if (runReplication.keys() != null && runReplication.hasNext()) {
                     runReplication.forEachRemaining(a -> {
                                 try {
-                                    replicate(a);
+                                    replicate(a, TransactionType.GRAPH);
                                     TransactionFileLogger.appendPollingLog(String.format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()), log);
-                                } catch (JSONException | IOException e) {
+                                } catch (JSONException | IOException | Neo4jException e) {
                                     log.error(e.getMessage(), e);
                                 }
                             }
@@ -192,15 +247,43 @@ public class ReplicationEngine {
                 }
                 recordsRemaining -= maxTxSize;
             }
-            log.info("Replication complete");
+            log.info("Graph replication complete");
         } catch (Neo4jException e) {
             log.warn("Could not create driver session. Reason: %s", e.getMessage());
         }
     }
 
-    private long pruneOldRecords() {
+    private void startStmtReplicationWithLimiter(int count) {
+        int recordsRemaining = count;
+        log.info("Beginning statement replication with %d records to replicate, and a limiter of %d", recordsRemaining, maxTxSize);
+
+        try {
+            while (recordsRemaining > 0) {
+                // pull all TransactionRecord nodes newer than last replicated.
+                Result runReplication = driver.session().run(format(STMT_REPL_QUERY, lastStmtTxTimestamp, maxTxSize));
+
+                if (runReplication.keys() != null && runReplication.hasNext()) {
+                    runReplication.forEachRemaining(a -> {
+                                try {
+                                    replicate(a, TransactionType.SCHEMA);
+                                    TransactionFileLogger.appendPollingLog(String.format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()), log);
+                                } catch (JSONException | IOException | Neo4jException e) {
+                                    log.error(e.getMessage(), e);
+                                }
+                            }
+                    );
+                }
+                recordsRemaining -= maxTxSize;
+            }
+            log.info("Statement replication complete");
+        } catch (Neo4jException e) {
+            log.warn("Could not create driver session. Reason: %s", e.getMessage());
+        }
+    }
+
+    private long pruneOldRecords(String query) {
         try(org.neo4j.graphdb.Transaction tx = gds.beginTx()) {
-            org.neo4j.graphdb.Result pruneResult = tx.execute(format(PRUNE_QUERY, daysAgo(pruningExpireDays)));
+            org.neo4j.graphdb.Result pruneResult = tx.execute(format(query, daysAgo(pruningExpireDays)));
 
             if (pruneResult.hasNext()) {
                 tx.commit();
@@ -227,7 +310,7 @@ public class ReplicationEngine {
                 e.printStackTrace();
             }
             log.info("Grabbing the last timestamp");
-            this.lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(gds);
+            this.lastTransactionTimestamp = TransactionHistoryManager.getLastReplicationTimestamp(gds, TransactionType.GRAPH);
             log.info("Grabbed the last timestamp");
 
             Result runReplication = driver.session().run(format(REPLICATION_QUERY, lastTransactionTimestamp));
@@ -237,7 +320,7 @@ public class ReplicationEngine {
                 try {
                     runReplication.forEachRemaining(a -> {
                                 try {
-                                    replicate(a);
+                                    replicate(a, TransactionType.GRAPH);
                                     TransactionFileLogger.appendPollingLog(String.format("Polling source: %d", new Date(System.currentTimeMillis()).getTime()), bufferingLog);
 
 
@@ -252,7 +335,7 @@ public class ReplicationEngine {
             }
             log.info("Starting pruning");
 
-            long recordsPruned = pruneOldRecords();
+            long recordsPruned = pruneOldRecords(PRUNE_QUERY);
             log.info("Pruning complete %d records pruned%n", recordsPruned);
 
             try {
@@ -278,16 +361,14 @@ public class ReplicationEngine {
         }
     }
 
-    private void replicate(Record record) throws JSONException {
+    private void replicate(Record record, TransactionType transactionType) throws JSONException {
 
         // grab the timestamp from the TransactionRecord node
         Value transactionTime = record.get("tr.timeCreated");
-        if (!record.get("tr.transactionData").asString().equals(ST_DATA_JSON)) {
+        if (transactionType == TransactionType.GRAPH) {
 
             // grab the transaction JSON data from the TransactionRecord node
-
             String transactionData = record.get("tr.transactionData").asString();
-
 
             try (org.neo4j.graphdb.Transaction tx = gds.beginTx()) {
                 TransactionDataHandler txHandler = new TransactionDataHandler(transactionData, tx, log);
@@ -296,22 +377,18 @@ public class ReplicationEngine {
             } catch (Exception e) {
                 log.error(e.getMessage(), e);
             } finally {
-                log.debug("ReplicationEngine -> Completed replication tx");
+                log.debug("ReplicationEngine -> Completed graph replication transaction");
             }
-
-
-        } else if (!record.get("tr.transactionStatement").asString().equals(ST_DATA_VALUE)) {
-
+        } else {
             try (org.neo4j.graphdb.Transaction tx = gds.beginTx()) {
                 tx.execute(record.get("tr.transactionStatement").asString());
             } catch (Exception e) {
                 log.error(e.getMessage(), e);
             } finally {
-                log.debug("ReplicationEngine -> Completed replication tx");
+                log.debug("ReplicationEngine -> Completed schema replication transaction");
             }
-
         }
-        TransactionHistoryManager.setLastReplicationTimestamp(gds, transactionTime.asLong());
+        TransactionHistoryManager.setLastReplicationTimestamp(gds, transactionTime.asLong(), transactionType);
         this.records++;
     }
 
@@ -322,8 +399,18 @@ public class ReplicationEngine {
         this.status = STOPPED;
     }
 
+    public void stopStmtRepl() {
+        if (this.stmtReplStatus == RUNNING) {
+            stmtScheduledFuture.cancel(true);
+        }
+        this.stmtReplStatus = STOPPED;
+    }
+
     public Status status() {
         return status;
+    }
+    public Status stmtReplStatus() {
+        return stmtReplStatus;
     }
 
     private long daysAgo(int daysPast) {
