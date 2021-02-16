@@ -23,6 +23,7 @@ public class ReplicationJudge {
     private static final String UUID = "uuid";
     private static final String TRANSACTION_RECORD = "TransactionRecord";
     private static final String LAST_TRANSACTION_REPLICATED = "LastTransactionReplicated";
+    private static final String LAST_STMT_TX_REPLICATED = "LastStmtTxReplicated";
 
     private ReplicationJudge() {
         // Private constructor to hide implicit public one
@@ -122,7 +123,7 @@ public class ReplicationJudge {
     private static boolean lastTransactionReplicatedNodeLabelExists(Iterable<Label> labels, Log log) {
         if (labels.iterator().hasNext()) {
             for (Label label : labels) {
-                if (label.name().equals(LAST_TRANSACTION_REPLICATED)) {
+                if (label.name().equals(LAST_TRANSACTION_REPLICATED) || label.name().equals(LAST_STMT_TX_REPLICATED)) {
                     log.debug("Transaction counter. Ignore and skip replication.");
                     return true;
                 }
