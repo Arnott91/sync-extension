@@ -50,10 +50,6 @@ public class CaptureTransactionEventListenerAdapter implements TransactionEventL
     public Node beforeCommit(TransactionData data, Transaction transaction, GraphDatabaseService sourceDatabase)
             throws Exception {
 
-        // REGARDING DDL AND DCL: We can grab index info from the transaction object if we really want to go there.
-        // Remember,  schema transactions cannot include DML transactions.
-        // System.out.println(transaction.schema().getIndexes().iterator().next().getName());
-
         Log log = getLog(sourceDatabase);
         log.debug("CaptureTransactionEventListenerAdapter -> In the beforeCommit method.");
 

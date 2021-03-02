@@ -6,6 +6,8 @@ import org.neo4j.logging.Log;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
@@ -36,6 +38,7 @@ public class Configuration {
     public static final String TX_ROLLBACK_KEY = "vnd.assure1.sync.tx_rollback_log";
     public static final String IN_BOUND_TX_KEY = "vnd.assure1.sync.tx_in_log";
     public static final String POLLING_KEY = "vnd.assure1.sync.poller_log";
+    public static final String LISTENER_DBS = "vnd.assure1.sync.listener_dbs";
     public static final String PRUNING_EXPIRE_DAYS_KEY = "vnd.assure1.sync.expire_days";
     public static final String MAX_TX_SIZE_KEY = "vnd.assure1.sync.max_tx_size";
     public static final String SYNC_INTERVAL_KEY = "vnd.assure1.sync.interval";
@@ -45,6 +48,7 @@ public class Configuration {
     private static final String DEFAULT_TX_OUT_LOG_FILE = "/var/lib/neo4j/data/OUTBOUND_TX/outbound_tx.log";
     private static final String DEFAULT_TX_RB_LOG_FILE= "/var/lib/neo4j/data/ROLLBACK_OUTBOUND_TX/rb_outbound_tx.log";
     private static final String DEFAULT_POLLING_LOG = "/var/lib/neo4j/data/POLLING/tx_poll.log";
+    private static final String DEFAULT_LISTENER_DB = "graph";
     private static final int DEFAULT_PRUNING_EXPIRE = 3;
     private static final int DEFAULT_MAX_TX_SIZE = 1000;
     private static final int DEFAULT_SYNC_INTERVAL_SEC = 30;
@@ -53,6 +57,7 @@ public class Configuration {
     private static String txOutLogFile;
     private static String txRbLogFile;
     private static String pollingLog;
+    private static List<String> listenerDBs = new ArrayList<>();
     private static Integer pruningExpireDays;
     private static Integer maxTxSize;
     private static Integer syncIntervalInSeconds;
@@ -102,6 +107,7 @@ public class Configuration {
         setTxOutLogFile(properties.getProperty(OUT_BOUND_TX_KEY));
         setTxRbLogFile(properties.getProperty(TX_ROLLBACK_KEY));
         setPollingLog(properties.getProperty(POLLING_KEY));
+        setListenerDBs(properties.getProperty(LISTENER_DBS));
         setPruningExpireDays(Integer.parseInt(properties.getProperty(PRUNING_EXPIRE_DAYS_KEY)));
         setMaxTxSize(Integer.parseInt(properties.getProperty(MAX_TX_SIZE_KEY)));
         setSyncIntervalInSeconds(Integer.parseInt(properties.getProperty(SYNC_INTERVAL_KEY)));
@@ -161,6 +167,19 @@ public class Configuration {
             Configuration.pollingLog = DEFAULT_POLLING_LOG;
         } else {
             Configuration.pollingLog = pollingLog;
+        }
+    }
+
+    public static List<String> getListenerDBs() {
+        return listenerDBs;
+    }
+
+    public static void setListenerDBs(String listenerDBs) {
+        if (null == listenerDBs) {
+            log.warn("Could not find '%s' config item; defaulting to '%s'", LISTENER_DBS, DEFAULT_LISTENER_DB);
+            Configuration.listenerDBs = List.of(DEFAULT_LISTENER_DB);
+        } else {
+            Configuration.listenerDBs = Arrays.asList(listenerDBs.split(","));
         }
     }
 
